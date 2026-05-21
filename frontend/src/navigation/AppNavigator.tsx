@@ -2,46 +2,52 @@ import { createStackNavigator } from '@react-navigation/stack';
 import React from 'react';
 
 // IMPORTACION DE PANTALLAS
-import AgregarERPScreen from '../screens/AgregarERPScreen';
-import AgregarParametroScreen from '../screens/AgregarParametroScreen';
-import AgregarRolScreen from '../screens/AgregarRolScreen';
-import AgregarSegmentoScreen from '../screens/AgregarSegmentoScreen';
-import AgregarUsuarioScreen from '../screens/AgregarUsuarioScreen';
-import AnalizandoCreditoScreen from '../screens/AnalizandoCreditoScreen';
-import AuditoriaScreen from '../screens/AuditoriaScreen';
-import AutenticarClienteScreen from '../screens/AutenticarClienteScreen';
-import ClientesScreen from '../screens/ClientesScreen';
-import ConectarERPScreen from '../screens/ConectarERPScreen';
-import ConfiguracionScreen from '../screens/ConfiguracionScreen';
-import CrearClienteScreen from '../screens/CrearClienteScreen';
-import CreditosAprobadosScreen from '../screens/CreditosAprobadosScreen';
+// ====================================================================
+// PANTALLAS MIGRADAS Y ACTIVAS
+// ====================================================================
 import DashboardScreen from '../screens/DashboardScreen';
-import DetalleClienteScreen from '../screens/DetalleClienteScreen';
-import EditarEmpresaScreen from '../screens/EditarEmpresaScreen';
-import EditarSegmentoScreen from '../screens/EditarSegmentoScreen';
-import EmpresaPerfilScreen from '../screens/EmpresaPerfilScreen';
-import IntegracionERPScreen from '../screens/IntegracionERPScreen';
 import LoginScreen from '../screens/LoginScreen';
-import MiPerfilScreen from '../screens/MiPerfilScreen';
-import ModificarClienteScreen from '../screens/ModificarClienteScreen';
-import NotificacionesScreen from '../screens/NotificacionesScreen';
-import ParametrosScreen from '../screens/ParametrosScreen';
-import RechazadosScreen from '../screens/RechazadosScreen';
-import ReenviarTokenScreen from '../screens/ReenviarTokenScreen';
-import ReportesScreen from '../screens/ReportesScreen';
-import RespuestaNegativaScreen from '../screens/RespuestaNegativaScreen';
-import RespuestaPositivaScreen from '../screens/RespuestaPositivaScreen';
-import ResultadosScoringScreen from '../screens/ResultadosScoringScreen';
-import RolesScreen from '../screens/RolesScreen';
-import ScoringConfigScreen from '../screens/ScoringConfigScreen';
-import SegmentosClientesScreen from '../screens/SegmentosClientesScreen';
-import SolicitudesPendientesScreen from '../screens/SolicitudesPendientesScreen';
-import SolicitudNivelCuatroScreen from '../screens/SolicitudNivelCuatroScreen';
-import SolicitudNivelDosScreen from '../screens/SolicitudNivelDosScreen';
-import SolicitudNivelTresScreen from '../screens/SolicitudNivelTresScreen';
-import SolicitudNivelUnoScreen from '../screens/SolicitudNivelUnoScreen';
+import ResultadoScreen from '../screens/ResultadoScreen';
 import SplashScreen from '../screens/SplashScreen';
-import UsuariosScreen from '../screens/UsuariosScreen';
+
+// ====================================================================
+// PANTALLAS PENDIENTES Y COMENTADAS PARA QUE METRO NO FALLE
+// ====================================================================
+// import AgregarERPScreen from '../screens/AgregarERPScreen';
+// import AgregarParametroScreen from '../screens/AgregarParametroScreen';
+// import AgregarRolScreen from '../screens/AgregarRolScreen';
+// import AgregarSegmentoScreen from '../screens/AgregarSegmentoScreen';
+// import AgregarUsuarioScreen from '../screens/AgregarUsuarioScreen';
+// import AnalizandoCreditoScreen from '../screens/AnalizandoCreditoScreen';
+// import AuditoriaScreen from '../screens/AuditoriaScreen';
+// import AutenticarClienteScreen from '../screens/AutenticarClienteScreen';
+// import ClientesScreen from '../screens/ClientesScreen';
+// import ConectarERPScreen from '../screens/ConectarERPScreen';
+// import ConfiguracionScreen from '../screens/ConfiguracionScreen';
+// import CrearClienteScreen from '../screens/CrearClienteScreen';
+// import CreditosAprobadosScreen from '../screens/CreditosAprobadosScreen';
+// import DetalleClienteScreen from '../screens/DetalleClienteScreen';
+// import EditarEmpresaScreen from '../screens/EditarEmpresaScreen';
+// import EditarSegmentoScreen from '../screens/EditarSegmentoScreen';
+// import EmpresaPerfilScreen from '../screens/EmpresaPerfilScreen';
+// import IntegracionERPScreen from '../screens/IntegracionERPScreen';
+// import MiPerfilScreen from '../screens/MiPerfilScreen';
+// import ModificarClienteScreen from '../screens/ModificarClienteScreen';
+// import NotificacionesScreen from '../screens/NotificacionesScreen';
+// import ParametrosScreen from '../screens/ParametrosScreen';
+// import RechazadosScreen from '../screens/RechazadosScreen';
+// import ReenviarTokenScreen from '../screens/ReenviarTokenScreen';
+// import ReportesScreen from '../screens/ReportesScreen';
+// import ResultadosScoringScreen from '../screens/ResultadosScoringScreen';
+// import RolesScreen from '../screens/RolesScreen';
+// import ScoringConfigScreen from '../screens/ScoringConfigScreen';
+// import SegmentosClientesScreen from '../screens/SegmentosClientesScreen';
+// import SolicitudesPendientesScreen from '../screens/SolicitudesPendientesScreen';
+// import SolicitudNivelCuatroScreen from '../screens/SolicitudNivelCuatroScreen';
+// import SolicitudNivelDosScreen from '../screens/SolicitudNivelDosScreen';
+// import SolicitudNivelTresScreen from '../screens/SolicitudNivelTresScreen';
+// import SolicitudNivelUnoScreen from '../screens/SolicitudNivelUnoScreen';
+// import UsuariosScreen from '../screens/UsuariosScreen';
 
 /**
  * Definicion de tipos para los parametros de navegacion de SIACRE
@@ -52,8 +58,14 @@ import UsuariosScreen from '../screens/UsuariosScreen';
 export type RootStackParamList = {
     Splash: undefined;
     Login: undefined;
-    RespuestaPositiva: undefined;
-    RespuestaNegativa: undefined;
+    Resultado: {
+      tipo: 'positivo' | 'negativo';
+      titulo: string;
+      subtitulo?: string;
+      rutaDestino: keyof RootStackParamList; // Cualquier screen validado o incluido en el stack
+      tiempoEspera?: number; // Opcional (1500ms por defecto)
+      textoBoton?: string; // Opcional (por si el caso negativo requiere un boton "Reintentar")
+    };
     Dashboard: undefined;
     Clientes: undefined;
     CrearCliente: undefined;
@@ -111,10 +123,9 @@ export default function AppNavigator() {
       >
         <Stack.Screen name="Splash" component={SplashScreen} />
         <Stack.Screen name="Login" component={LoginScreen} />
-        <Stack.Screen name="RespuestaPositiva" component={RespuestaPositivaScreen} />
-        <Stack.Screen name="RespuestaNegativa" component={RespuestaNegativaScreen} />
+        <Stack.Screen name="Resultado" component={ResultadoScreen} />
         <Stack.Screen name="Dashboard" component={DashboardScreen} />
-        <Stack.Screen name="Clientes" component={ClientesScreen} />
+        {/* <Stack.Screen name="Clientes" component={ClientesScreen} />
         <Stack.Screen name="CrearCliente" component={CrearClienteScreen} />
         <Stack.Screen name="ModificarCliente" component={ModificarClienteScreen} />
         <Stack.Screen name="Notificaciones" component={NotificacionesScreen} />
@@ -148,7 +159,7 @@ export default function AppNavigator() {
         <Stack.Screen name="MiPerfil" component={MiPerfilScreen} />
         <Stack.Screen name="AgregarSegmento" component={AgregarSegmentoScreen} />
         <Stack.Screen name="EditarSegmento" component={EditarSegmentoScreen} />
-        <Stack.Screen name="DetalleCliente" component={DetalleClienteScreen} />
+        <Stack.Screen name="DetalleCliente" component={DetalleClienteScreen} /> */}
       </Stack.Navigator>
   );
 }
