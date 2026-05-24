@@ -1,25 +1,30 @@
 import { createStackNavigator } from '@react-navigation/stack';
 import React from 'react';
+import { Usuario } from '../screens/UsuariosScreen';
+import { Parametro } from '../types/parametros';
 
 // IMPORTACION DE PANTALLAS
 // ====================================================================
 // PANTALLAS MIGRADAS Y ACTIVAS
 // ====================================================================
+import AuditoriaScreen from '../screens/AuditoriaScreen';
 import DashboardScreen from '../screens/DashboardScreen';
+import FormularioParametroScreen from '../screens/FormularioParametroScreen';
+import FormularioRolScreen from '../screens/FormularioRolScreen';
+import FormularioUsuarioScreen from '../screens/FormularioUsuarioScreen';
 import LoginScreen from '../screens/LoginScreen';
+import ParametrosScreen from '../screens/ParametrosScreen';
 import ResultadoScreen from '../screens/ResultadoScreen';
+import RolesScreen from '../screens/RolesScreen';
 import SplashScreen from '../screens/SplashScreen';
+import UsuariosScreen from '../screens/UsuariosScreen';
 
 // ====================================================================
 // PANTALLAS PENDIENTES Y COMENTADAS PARA QUE METRO NO FALLE
 // ====================================================================
 // import AgregarERPScreen from '../screens/AgregarERPScreen';
-// import AgregarParametroScreen from '../screens/AgregarParametroScreen';
-// import AgregarRolScreen from '../screens/AgregarRolScreen';
 // import AgregarSegmentoScreen from '../screens/AgregarSegmentoScreen';
-// import AgregarUsuarioScreen from '../screens/AgregarUsuarioScreen';
 // import AnalizandoCreditoScreen from '../screens/AnalizandoCreditoScreen';
-// import AuditoriaScreen from '../screens/AuditoriaScreen';
 // import AutenticarClienteScreen from '../screens/AutenticarClienteScreen';
 // import ClientesScreen from '../screens/ClientesScreen';
 // import ConectarERPScreen from '../screens/ConectarERPScreen';
@@ -34,12 +39,10 @@ import SplashScreen from '../screens/SplashScreen';
 // import MiPerfilScreen from '../screens/MiPerfilScreen';
 // import ModificarClienteScreen from '../screens/ModificarClienteScreen';
 // import NotificacionesScreen from '../screens/NotificacionesScreen';
-// import ParametrosScreen from '../screens/ParametrosScreen';
 // import RechazadosScreen from '../screens/RechazadosScreen';
 // import ReenviarTokenScreen from '../screens/ReenviarTokenScreen';
 // import ReportesScreen from '../screens/ReportesScreen';
 // import ResultadosScoringScreen from '../screens/ResultadosScoringScreen';
-// import RolesScreen from '../screens/RolesScreen';
 // import ScoringConfigScreen from '../screens/ScoringConfigScreen';
 // import SegmentosClientesScreen from '../screens/SegmentosClientesScreen';
 // import SolicitudesPendientesScreen from '../screens/SolicitudesPendientesScreen';
@@ -47,7 +50,7 @@ import SplashScreen from '../screens/SplashScreen';
 // import SolicitudNivelDosScreen from '../screens/SolicitudNivelDosScreen';
 // import SolicitudNivelTresScreen from '../screens/SolicitudNivelTresScreen';
 // import SolicitudNivelUnoScreen from '../screens/SolicitudNivelUnoScreen';
-// import UsuariosScreen from '../screens/UsuariosScreen';
+
 
 /**
  * Definicion de tipos para los parametros de navegacion de SIACRE
@@ -67,6 +70,18 @@ export type RootStackParamList = {
       textoBoton?: string; // Opcional (por si el caso negativo requiere un boton "Reintentar")
     };
     Dashboard: undefined;
+    Roles: undefined;
+    FormularioRol: undefined | { rolExistente: any };
+    Usuarios: undefined;
+    FormularioUsuario: undefined | { usuarioExistente: Usuario };
+    Auditoria: undefined;
+    Parametros: undefined;
+    FormularioParametro: {
+      tipo_parametro: 'cualitativo' | 'cuantitativo';
+      parametro_existente?: Parametro
+    };
+    ScoringConfig: undefined;
+
     Clientes: undefined;
     CrearCliente: undefined;
     ModificarCliente: undefined;
@@ -80,17 +95,9 @@ export type RootStackParamList = {
     CreditosAprobados: undefined;
     Rechazados: undefined;
     ResultadosScoring: undefined;
-    Parametros: undefined;
-    ScoringConfig: undefined;
     EmpresaPerfil: undefined;
     Reportes: undefined;
     Configuracion: undefined;
-    Usuarios: undefined;
-    Roles: undefined;
-    Auditoria: undefined;
-    AgregarParametro: undefined;
-    AgregarUsuario: undefined;
-    AgregarRol: undefined;
     EditarEmpresa: undefined;
     SolicitudesPendientes: undefined;
     IntegracionERP: undefined;
@@ -125,6 +132,14 @@ export default function AppNavigator() {
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Resultado" component={ResultadoScreen} />
         <Stack.Screen name="Dashboard" component={DashboardScreen} />
+        <Stack.Screen name="Roles" component={RolesScreen} />
+        <Stack.Screen name="FormularioRol" component={FormularioRolScreen} />
+        <Stack.Screen name="Usuarios" component={UsuariosScreen} />
+        <Stack.Screen name="FormularioUsuario" component={FormularioUsuarioScreen} />
+        <Stack.Screen name="Auditoria" component={AuditoriaScreen} />
+        <Stack.Screen name="Parametros" component={ParametrosScreen} />
+        <Stack.Screen name="FormularioParametro" component={FormularioParametroScreen} />
+
         {/* <Stack.Screen name="Clientes" component={ClientesScreen} />
         <Stack.Screen name="CrearCliente" component={CrearClienteScreen} />
         <Stack.Screen name="ModificarCliente" component={ModificarClienteScreen} />
@@ -138,17 +153,10 @@ export default function AppNavigator() {
         <Stack.Screen name="CreditosAprobados" component={CreditosAprobadosScreen} />
         <Stack.Screen name="Rechazados" component={RechazadosScreen} />
         <Stack.Screen name="ResultadosScoring" component={ResultadosScoringScreen} />
-        <Stack.Screen name="Parametros" component={ParametrosScreen} />
         <Stack.Screen name="ScoringConfig" component={ScoringConfigScreen} />
         <Stack.Screen name="EmpresaPerfil" component={EmpresaPerfilScreen} />
         <Stack.Screen name="Reportes" component={ReportesScreen} />
         <Stack.Screen name="Configuracion" component={ConfiguracionScreen} />
-        <Stack.Screen name="Usuarios" component={UsuariosScreen} />
-        <Stack.Screen name="Roles" component={RolesScreen} />
-        <Stack.Screen name="Auditoria" component={AuditoriaScreen} />
-        <Stack.Screen name="AgregarParametro" component={AgregarParametroScreen} />
-        <Stack.Screen name="AgregarUsuario" component={AgregarUsuarioScreen} />
-        <Stack.Screen name="AgregarRol" component={AgregarRolScreen} />
         <Stack.Screen name="EditarEmpresa" component={EditarEmpresaScreen} />
         <Stack.Screen name="SolicitudesPendientes" component={SolicitudesPendientesScreen} />
         <Stack.Screen name="IntegracionERP" component={IntegracionERPScreen} />
