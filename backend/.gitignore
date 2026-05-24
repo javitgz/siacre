@@ -1,0 +1,20 @@
+# Entorno virtual local de Python
+venv/
+.venv/
+env/
+
+# Variables de entorno (Seguridad Crítica - Aquí está tu clave de MySQL)
+.env
+
+# Archivos de configuración de PyCharm / IDEs
+.idea/
+.vscode/
+
+# Caché de ejecución de Python
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Historial de logs o reportes
+*.log
