@@ -1,38 +1,47 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
+from datetime import timedelta
 from app.core.database import get_db
 from app.crud import user as crud_user
 from app.schemas.auth import LoginRequest
 from app.schemas.user import UserResponse
+from app.core.auth import authenticate_user, create_access_token, get_password_hash
+from app.core.config import settings
 
 router = APIRouter(prefix="/api/auth", tags=["Autenticación"])
 
-
-@router.post("/login", response_model=UserResponse)
+@router.post("/login")
 def login(credentials: LoginRequest, db: Session = Depends(get_db)):
-    # 1. Buscar al usuario por su email
-    user = crud_user.get_user_by_email(db, email=credentials.email)
-
-    # 2. Si no existe, lanzamos un 401 (No autorizado)
+    # Autenticar usuario
+    user = authenticate_user(db, credentials.email, credentials.password)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="El correo electrónico o la contraseña son incorrectos"
+            detail="Correo o contraseña incorrectos",
         )
-
-    # 3. Verificar si el usuario fue desactivado (Soft delete)
     if user.estado == 0:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Este usuario se encuentra inactivo en el sistema"
+            detail="Usuario inactivo"
         )
-
-    # 4. Validar contraseña (Texto plano por ahora)
-    if user.password != credentials.password:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="El correo electrónico o la contraseña son incorrectos"
-        )
-
-    # Si todo coincide, devolvemos el objeto usuario (FastAPI lo filtrará con UserResponse)
-    return user
+    # Crear token
+    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": str(user.id)}, expires_delta=access_token_expires
+    )
+    # Devolver token y datos del usuario
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": UserResponse(
+            id=user.id,
+            nombre=user.nombre,
+            apellidos=user.apellidos,
+            email=user.email,
+            estado=user.estado,
+            rol_id=user.rol_id,
+            creado=user.creado,
+            rol_nombre=user.rol.nombre if user.rol else None
+        ).model_dump()
+    }

@@ -1,18 +1,14 @@
 from app.core.database import engine, Base
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import roles
-
-# Importar los modelos para que SQLAlchemy sepa que existen antes del create_all
-from app.models import role, user
-
-# Importar enrutadores
 from app.routers import roles, users, auth
+from app.models import role, user
 
 app = FastAPI(
     title="SIACRE API",
     description="Backend automatizado para la evaluación de créditos PYMES",
-    version="1.0.0"
+    version="1.0.0",
+    redirect_slashes=False # Evita redirecciones 307
 )
 
 # Configuración de CORS para permitir conexiones desde el frontend de React Native / Expo
