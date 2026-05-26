@@ -1,7 +1,7 @@
 import { createStackNavigator } from '@react-navigation/stack';
 import React from 'react';
-import { Usuario } from '../screens/UsuariosScreen';
 import { Parametro } from '../types/parametros';
+import { Usuario } from '../utils/api';
 
 // IMPORTACION DE PANTALLAS
 // ====================================================================

@@ -1,6 +1,7 @@
 import { StackScreenProps } from '@react-navigation/stack';
 import React, { useState } from 'react';
 import {
+    ActivityIndicator,
     Image,
     KeyboardAvoidingView,
     Platform,
@@ -13,22 +14,21 @@ import {
 import Alert from '../components/Alert';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { colors } from '../styles/globalStyles';
+import { loginUser } from '../utils/api';
+import { saveUserSession } from '../utils/storage';
 
-// Definición de propiedades de navegación para la pantalla de Login
 type Props = StackScreenProps<RootStackParamList, 'Login'>;
-
-// Tipo estricto para las alertas locales (en este caso, manejaremos solo la negativa)
 type TipoAlerta = 'positivo' | 'negativo';
 
 export default function LoginScreen({ navigation }: Props) {
     const [correo, setCorreo] = useState<string>('');
     const [clave, setClave] = useState<string>('');
+    const [loading, setLoading] = useState<boolean>(false);
     const [alertVisible, setAlertVisible] = useState<boolean>(false);
     const [alertTipo, setAlertTipo] = useState<TipoAlerta>('negativo');
     const [alertMensaje, setAlertMensaje] = useState<string>('');
 
-    const handleLogin = () => {
-        // 1. Validación básica de campos vacíos
+    const handleLogin = async () => {
         if (!correo.trim() || !clave.trim()) {
             setAlertTipo('negativo');
             setAlertMensaje('Por favor, completa todos los campos.');
@@ -36,29 +36,42 @@ export default function LoginScreen({ navigation }: Props) {
             return;
         }
 
-        // 2. Validación de credenciales quemadas para pruebas locales
-        if (correo === 'admin@siacre.com' && clave === '123456') {
-            // Primero activamos la notificación local positiva
+        setLoading(true);
+        try {
+            // ✅ Una sola llamada a loginUser
+            const response = await loginUser({ 
+                email: correo.trim(), 
+                password: clave 
+            });
+
+            // ✅ Guardar token y datos de usuario en SecureStore
+            await saveUserSession({
+                access_token: response.access_token,
+                user: response.user
+            });
+
+            // ✅ Mostrar alerta con el nombre del usuario
             setAlertTipo('positivo');
-            setAlertMensaje('Credenciales correctas');
+            setAlertMensaje(`¡Bienvenido, ${response.user.nombre}!`);
             setAlertVisible(true);
-            // Retrasamos el salto de pantalla 1.2 segundos para que el usuario pueda leer la notificación
+
             setTimeout(() => {
-                setAlertVisible(false); // Ocultamos la alerta local justo antes de migrar
-                // Ejecutamos el reemplazo hacia tu pantalla unificada de estado
+                setAlertVisible(false);
                 navigation.replace('Resultado', {
                     tipo: 'positivo',
                     titulo: '¡Bienvenido!',
                     subtitulo: 'Cargando la aplicación..',
                     rutaDestino: 'Dashboard',
-                    tiempoEspera: 1500 // Tiempo que durará la pantalla azul antes del Dashboard
+                    tiempoEspera: 1500 
                 });
-            }, 1200); // 1200ms es el tiempo ideal de lectura para un mensaje corto
-        } else {
-            // Si falla, se queda en la pantalla y activa la notificación negativa local
+            }, 1200);
+
+        } catch (error: any) {
             setAlertTipo('negativo');
-            setAlertMensaje('Credenciales incorrectas');
+            setAlertMensaje(error.message || 'Error inesperado al iniciar sesión');
             setAlertVisible(true);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -67,7 +80,6 @@ export default function LoginScreen({ navigation }: Props) {
             style={styles.container}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
-            {/* El componente Alert aquí solo se activará con las notificaciones negativas o de validación */}
             <Alert
                 visible={alertVisible}
                 tipo={alertTipo}
@@ -91,6 +103,8 @@ export default function LoginScreen({ navigation }: Props) {
                     onChangeText={setCorreo}
                     keyboardType="email-address"
                     autoCapitalize="none"
+                    autoCorrect={false}
+                    editable={!loading}
                 />
 
                 <TextInput
@@ -100,10 +114,21 @@ export default function LoginScreen({ navigation }: Props) {
                     value={clave}
                     onChangeText={setClave}
                     secureTextEntry
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    editable={!loading}
                 />
 
-                <TouchableOpacity style={styles.boton} onPress={handleLogin}>
-                    <Text style={styles.botonTexto}>Iniciar sesión</Text>
+                <TouchableOpacity 
+                    style={[styles.boton, loading && styles.botonDeshabilitado]} 
+                    onPress={handleLogin}
+                    disabled={loading}
+                >
+                    {loading ? (
+                        <ActivityIndicator color={colors.blanco} />
+                    ) : (
+                        <Text style={styles.botonTexto}>Iniciar sesión</Text>
+                    )}
                 </TouchableOpacity>
             </ScrollView>
         </KeyboardAvoidingView>
@@ -142,6 +167,7 @@ const styles = StyleSheet.create({
         marginBottom: 12,
         fontSize: 14,
         backgroundColor: colors.blanco,
+        color: '#000000',
     },
     boton: {
         backgroundColor: colors.azulClaro,
@@ -149,6 +175,9 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         alignItems: 'center',
         marginTop: 8,
+    },
+    botonDeshabilitado: {
+        backgroundColor: '#a2c8f2',
     },
     botonTexto: {
         color: colors.blanco,
