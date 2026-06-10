@@ -4,10 +4,14 @@ from sqlalchemy.sql import func
 from app.core.database import Base
 
 class User(Base):
+    """
+    TABLA: usuarios (HU04)
+    Entidad que reperesenta a los colaboradores del sistema, restringidos por empresa, rol y permisos
+    """
     __tablename__ = "usuarios"
 
     id = Column(Integer, primary_key=True, index=True)
-    nombre = Column(String(100), nullable=False)
+    nombres = Column(String(100), nullable=False)
     apellidos = Column(String(100), nullable=False)
     tipo_documento = Column(String(20), nullable=False)
     documento = Column(String(20), unique=True, nullable=False)
@@ -19,7 +23,12 @@ class User(Base):
     password = Column(String(255), nullable=False)
     estado = Column(Integer, default=1) # 1=activo, 0=inactivo
     rol_id = Column(Integer, ForeignKey("roles.id"), nullable=False)
+    empresa_id = Column(Integer, ForeignKey("empresas.id", ondelete="RESTRICT"), nullable=False)
     creado = Column(DateTime, server_default=func.now())
+    modificado = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
-    # Relación para cargar datos del Rol
+    # Relación ORM para cargar datos del Rol
     rol = relationship("Role")
+
+    # Relacion ORM para interctuar directamente con los datos de la empresa asignada
+    empresa = relationship("empresa", back_populates="usuarios")

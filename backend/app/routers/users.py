@@ -1,160 +1,230 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlalchemy.orm import Session, joinedload
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
 from typing import List
+
 from app.core.database import get_db
-from app.crud import user as crud_user
-from app.schemas.user import UserCreate, UserResponse
-from app.core.auth import get_current_user
+from app.core.auth import get_current_user # Dependencia que extrae el usuario autenticado desde el JWT
 from app.models.user import User
+from app.crud import user as crud_user
+from app.crud import role as crud_role
+from app.schemas.user import UserCreate, UserUpdate, UserResponse
 
 router = APIRouter(prefix="/api/usuarios", tags=["Usuarios"])
 
-@router.get("/", response_model=List[UserResponse])
-def read_users(
+# ===================================================================================
+# 1. OBTENER PERFIL PROPIO (Acceso para todos los Roles, incluido los analistas)
+# ===================================================================================
+@router.get('/me', response_model=UserResponse)
+def leer_perfil_propio(current_user: User = Depends(get_current_user)):
+    """
+    Permite a cualquier usuario autenticado (incluyendo analistas) consulsultar su propio perfil
+    """
+    return current_user
+
+@router.patch('/me', response_model=UserResponse)
+def actualizar_perfil_propio(
+        user_in: UserUpdate,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    """
+    Permite a cualquier usuario actualizar exclusivamente sus propio datos de perfil
+    """
+    # Se fuerza a que solo pueda modificarse a si mismo dentro de su empresa
+    user_actualizado = crud_user.update_user(
+        db=db, user_id=current_user.id, empresa_id=current_user.empresa_id, user_in=user_in
+    )
+    return user_actualizado
+
+# ===================================================================================
+# 2. LISTAR USUARIOS DE LA EMPRESA (Restringido para analistas)
+# ===================================================================================
+@router.get('/', response_model=List[UserResponse])
+def listar_usuarios(
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    users = db.query(User).options(joinedload(User.rol)).offset(skip).limit(limit).all()
-    result = []
-    for u in users:
-        u_dict = {
-            "id": u.id,
-            "nombre": u.nombre,
-            "apellidos": u.apellidos,
-            "tipo_documento": u.tipo_documento,
-            "documento": u.documento,
-            "telefono": u.telefono,
-            "direccion": u.direccion,
-            "municipio": u.municipio,
-            "departamento": u.departamento,
-            "email": u.email,
-            "estado": u.estado,
-            "rol_id": u.rol_id,
-            "creado": u.creado,
-            "rol_nombre": u.rol.nombre if u.rol else None
-        }
-        result.append(UserResponse(**u_dict))
-    return result
-
-@router.post("/", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-def create_new_user(
-    user: UserCreate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    db_user = crud_user.get_user_by_email(db, email=user.email)
-    if db_user:
-        raise HTTPException(status_code=400, detail="El email ya se encuentra registrado")
-    new_user = crud_user.create_user(db=db, user=user)
-    return UserResponse(
-        id=new_user.id,
-        nombre=new_user.nombre,
-        apellidos=new_user.apellidos,
-        tipo_documento=new_user.tipo_documento,
-        documento=new_user.documento,
-        telefono=new_user.telefono,
-        direccion=new_user.direccion,
-        municipio=new_user.municipio,
-        departamento=new_user.departamento,
-        email=new_user.email,
-        estado=new_user.estado,
-        rol_id=new_user.rol_id,
-        creado=new_user.creado,
-        rol_nombre=new_user.rol.nombre if new_user.rol else None
+    """
+    Lista los usuarios del mismo inquilino (empresa_id)
+    - Los analistas tienen el acceso denegado
+    - Los coordinadores / supervisores no pueden ver los usuarios con rol 'administrador'
+    """
+    # REGLA 1: Los analistas, no tienne permiso al modulo de usuarios
+    if current_user.rol.nombre.lower() == 'analista':
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='No tiene permisos para acceder al modulo de usuarios'
+        )
+    usuarios = crud_user.get_user_by_empresa(
+        db = db, empresa_id=current_user.empresa_id, skip=skip, limit=limit
     )
 
-@router.put("/{user_id}", response_model=UserResponse)
-def modify_user(
-    user_id: int,
-    user_update: UserCreate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    # REGLA 2: Coordinadores / supervisores no puede ver al usuario administrador
+    if current_user.rol.nombre.lower() in ['coordinador', 'supervisor']:
+        usuarios = [u for u in usuarios if u.rol.nombre.lower() != 'administrador']
+
+    return usuarios
+
+# ===================================================================================
+# 3. CREAR USUARIO (Reglas jerarquicas estrictas de Roles)
+# ===================================================================================
+@router.post('/', response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+def crear_usuario(
+        user_in: UserCreate,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
 ):
-    if current_user.id == user_id and user_update.rol_id != current_user.rol_id:
-        raise HTTPException(status_code=403, detail="No puede cambiar su propio rol")
-    db_user = crud_user.update_user(db=db, user_id=user_id, user_update=user_update)
-    if not db_user:
-        raise HTTPException(status_code=404, detail="Usuario no encontrado")
-    return UserResponse(
-        id=db_user.id,
-        nombre=db_user.nombre,
-        apellidos=db_user.apellidos,
-        tipo_documento=db_user.tipo_documento,
-        documento=db_user.documento,
-        telefono=db_user.telefono,
-        direccion=db_user.direccion,
-        municipio=db_user.municipio,
-        departamento=db_user.departamento,
-        email=db_user.email,
-        estado=db_user.estado,
-        rol_id=db_user.rol_id,
-        creado=db_user.creado,
-        rol_nombre=db_user.rol.nombre if db_user.rol else None
+    """
+    Registra un usuario bajo el aislamiento multi-tenant
+    - Los analistas no puede crear usuarios
+    - Solo un Administrador puede asignar el rol administrador
+    - Los coordinadores / supervisores no pueden ver, seleccionar ni asignar el rol administrador
+    """
+    if current_user.rol.nombre.lower() == 'analista':
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='No tiene permiso para crear usuarios'
+        )
+
+    # Forzar que el nuevo usuario pertenezca estrictamente a la misma empresa del creador
+    user_in.empresa_id = current_user.empresa_id
+
+    # Verificar el rol que se intenta asignar
+    rol_destino = crud_role.get_rol(db, role_id=user_in.rol_id)
+    if not rol_destino:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail='El rol asignado no existe'
+        )
+
+    # REGLA: Nadie inferior a administrador puede seleccionar o ver el rol administador
+    if rol_destino.nombre.lower() == 'administrador' and current_user.rol.nombre.lower() != 'administrador':
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='Operacion no permitida. Solo un administrador puede crear otro administrador'
+        )
+    # Verificar unicidad del correo electronico
+    usuario_existente = crud_user.get_user_by_email(db, email=user_in.email)
+    if usuario_existente:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='El correo electronico ya se encuentra registrado'
+        )
+    return crud_user.create_user(db=db, user_in=user_in)
+
+# ===================================================================================
+# 4. ACTUALIZACION ADMINISTRATIVA Y CONTROL DE ESTADO
+# ===================================================================================
+@router.patch('/{user_id}', response_model=UserResponse)
+def actualizar_usuario(
+        user_id: int,
+        user_in: UserUpdate,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    """
+    Permite a los mandos autorizados modificar los datos de perfil de un colaborador
+     - analistas: acceso denegado
+     - coordinadores / supervisores: Solo pueden modificar usuarios con rol analista
+    """
+    if current_user.rol.nombre.lower() == 'analista':
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='No tiene permisos para modificar usuarios'
+        )
+
+    target_user = crud_user.get_user(db=db, user_id=user_id, empresa_id=current_user.empresa_id)
+    if not target_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail='Usuario no encontrado en esta empresa'
+        )
+
+    # REGLA JERARQUICA: Validar limites de edicion del coordinador / supervisor
+    if current_user.rol.nombre.lower() in ['coordinador', 'supervisor']:
+        if target_user.rol.nombre.lower() != 'analista':
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail='Permiso denegado: Los coordinadores / supervisores solo pueden actualizar perfiles analistas'
+            )
+    return crud_user.update_user(db=db, user_id=user_id, empresa_id=current_user.empresa_id, user_in=user_in)
+
+# ===================================================================================
+# 5. ACTIVAR / DESACTIVAR USUARIOS (Flujo de aprobacion descentralizado)
+# ===================================================================================
+@router.patch('/{user_id}/estado', response_model=UserResponse)
+def cambiar_estado(
+        user_id: int,
+        activo: bool,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    """
+    Permite la activacion o desactivacion de un usuario
+    - El administrador tiene control
+    - El coordinador o supervisor puede activar / desactivar analistas exclusivamente
+    """
+    if current_user.rol.nombre.lower() == 'analista':
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='No tiene permisos para modificar estados de usuarios'
+        )
+
+    # Buscar el usuario objetivo garantizando el aislamiento por empresa
+    target_user = crud_user.get_user(db=db, user_id=user_id, empresa_id=current_user.empresa_id)
+    if not target_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail='Usuario no encontrado en esta empresa'
+        )
+
+    # REGLA: Coordinador / supervisor solo puede alterar usuario con rol analista
+    if current_user.rol.nombre.lower() in ['coordinador', 'supervisor']:
+        if target_user.rol.nombre.lower() != 'analista':
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail='Permiso denegado. Los coordinadores / supervisores solo pueden activar o desactivar perfiles analistas'
+            )
+    return crud_user.cambiar_estado_usuario(
+        db=db, user_id=user_id, empresa_id=current_user.empresa_id, activo=activo
     )
 
-@router.delete("/{user_id}", response_model=UserResponse)
-def remove_user(
-    user_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+# ===================================================================================
+# 6. ELIMINACION DE USUARIOS (Soft Delete)
+# ===================================================================================
+@router.delete('/{user_id}', response_model=UserResponse)
+def eliminar_usuario(
+        user_id: int,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
 ):
-    user_to_delete = crud_user.get_user_by_id(db, user_id)
-    if not user_to_delete:
-        raise HTTPException(status_code=404, detail="Usuario no encontrado")
-    if user_to_delete.email == "admin@siacre.com" or user_to_delete.rol_id == 1:
-        raise HTTPException(status_code=403, detail="No se puede eliminar el administrador principal")
-    db_user = crud_user.delete_user(db=db, user_id=user_id)
-    return UserResponse(
-        id=db_user.id,
-        nombre=db_user.nombre,
-        apellidos=db_user.apellidos,
-        tipo_documento=db_user.tipo_documento,
-        documento=db_user.documento,
-        telefono=db_user.telefono,
-        direccion=db_user.direccion,
-        municipio=db_user.municipio,
-        departamento=db_user.departamento,
-        email=db_user.email,
-        estado=db_user.estado,
-        rol_id=db_user.rol_id,
-        creado=db_user.creado,
-        rol_nombre=db_user.rol.nombre if db_user.rol else None
-    )
+    """
+        Ejecuta un borrado lógico (Soft Delete, estado = 0) sobre un usuario de la empresa.
+        - Analistas: Acceso denegado.
+        - Coordinadores/Supervisores: Solo pueden dar de baja a perfiles analistas.
+        - Administrador: Control total sobre los colaboradores de su empresa.
+        """
+    if current_user.rol.nombre.lower() == 'analista':
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='No tiene permisos para eliminar usuarios.'
+        )
 
-@router.patch("/{user_id}/estado", response_model=UserResponse)
-def toggle_user_status(
-    user_id: int,
-    activo: bool = Query(...),  # ✅ query parameter, no body
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    if current_user.id == user_id and not activo:
-        raise HTTPException(status_code=403, detail="No puede desactivarse a sí mismo")
-    user = crud_user.get_user_by_id(db, user_id)
-    if not user:
-        raise HTTPException(status_code=404, detail="Usuario no encontrado")
-    if user.email == "admin@siacre.com" or user.rol_id == 1:
-        raise HTTPException(status_code=403, detail="No se puede modificar el estado del administrador principal")
-    nuevo_estado = 1 if activo else 0
-    if user.estado == nuevo_estado:
-        estado_texto = "activado" if activo else "desactivado"
-        raise HTTPException(status_code=400, detail=f"El usuario ya se encuentra {estado_texto}")
-    db_user = crud_user.cambiar_estado_usuario(db, user_id, activo)
-    return UserResponse(
-        id=db_user.id,
-        nombre=db_user.nombre,
-        apellidos=db_user.apellidos,
-        tipo_documento=db_user.tipo_documento,
-        documento=db_user.documento,
-        telefono=db_user.telefono,
-        direccion=db_user.direccion,
-        municipio=db_user.municipio,
-        departamento=db_user.departamento,
-        email=db_user.email,
-        estado=db_user.estado,
-        rol_id=db_user.rol_id,
-        creado=db_user.creado,
-        rol_nombre=db_user.rol.nombre if db_user.rol else None
-    )
+    target_user = crud_user.get_user(db=db, user_id=user_id, empresa_id=current_user.empresa_id)
+    if not target_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail='Usuario no encontrado en esta empresa.'
+        )
+
+    # REGLA JERÁRQUICA: El coordinador/supervisor solo puede aplicar soft delete a analistas
+    if current_user.rol.nombre.lower() in ['coordinador', 'supervisor']:
+        if target_user.rol.nombre.lower() != 'analista':
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail='Permiso denegado. Los coordinadores / supervisores solo pueden eliminar perfiles analistas.'
+            )
+
+    return crud_user.delete_user(db=db, user_id=user_id, empresa_id=current_user.empresa_id)
