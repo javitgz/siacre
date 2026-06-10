@@ -35,11 +35,10 @@ class Empresa(Base):
     departamento = Column(String(150), nullable=False)
     email = Column(String(50), nullable=False)
     telefono = Column(String(25), nullable=False)
-    estado = Column(Integer, default=1) # inactivo = 0, activo = 1
+    estado = Column(Integer, default=1)
     creado = Column(DateTime, server_default=func.now())
     modificado = Column(DateTime, server_default=func.now(), onupdate=func.now())
     ruta_logo = Column(String(255), nullable=True)
-    # Relacion ORM para vincular los usuarios pertenecientes a cada empresa
-    usuarios = relationship("User", back_populates="empresa")
 
+    usuarios = relationship("User", back_populates="empresa")
 

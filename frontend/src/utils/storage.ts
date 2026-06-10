@@ -3,30 +3,53 @@ import * as SecureStore from 'expo-secure-store';
 
 const USER_SESSION_KEY = 'siacre_user_session';
 
+export interface UserData {
+    id: string;
+    nombre: string;
+    email: string;
+    rol_id: string;
+    empresa_id: string;
+}
+
 export interface UserSession {
     access_token: string;
-    user: any;
+    token_type?: string; // Con signo de interrogación para hacerlo opcional
+    user: UserData;
 }
 
 /**
- * Guarda la sesión del usuario de forma cifrada en el dispositivo
+ * Guarda la sesión cifrada proveniendte del backend FastAPI
  */
 export const saveUserSession = async (session: UserSession): Promise<void> => {
-    await SecureStore.setItemAsync(USER_SESSION_KEY, JSON.stringify(session));
+    try {
+        await SecureStore.setItemAsync(USER_SESSION_KEY, JSON.stringify(session));
+    } catch (error) {
+        console.error('Error al guardar la sesion segura: ', error);
+        throw new Error('No se pudo persistir la sesion de forma cifrada.');
+    }
 };
 
 /**
- * Recupera la sesión cifrada del usuario
+ * Recupera la sesión cifrada actual activa
  */
 export const getUserSession = async (): Promise<UserSession | null> => {
-    const session = await SecureStore.getItemAsync(USER_SESSION_KEY);
-    return session ? JSON.parse(session) : null;
+    try {
+        const sessionStr = await SecureStore.getItemAsync(USER_SESSION_KEY);
+        return sessionStr ? JSON.parse(sessionStr) : null;
+    } catch (error) {
+        console.error('Error al recuperar la sesion segura: ', error);
+        return null;
+    }
 };
 
 
 /**
- * Elimina la sesión (Cierre de sesión / Logout)
+ * Elimina el token y destruye la sesion del dispositivo
  */
 export const deleteUserSession = async (): Promise<void> => {
-    await SecureStore.deleteItemAsync(USER_SESSION_KEY);
+    try {
+        await SecureStore.deleteItemAsync(USER_SESSION_KEY);
+    } catch (error) {
+        console.error('Error al eliminar la sesion segura: ', error);
+    }
 };

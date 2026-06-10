@@ -4,10 +4,10 @@ import React from "react";
 import { LogBox, StyleSheet, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
-import AppNavigator from "./src/navigation/AppNavigator";
-import { colors } from "./src/styles/globalStyles";
+import AppNavigator from "../navigation/AppNavigator";
+import { colors } from "../styles/globalStyles";
 
-// Silenciar advertencias especificas que no generen ruido visual innecesario en la consola
+// Silenciar advertencias especificas que geenren ruido visual innecesario en la consola
 LogBox.ignoreLogs(['InteractionManager has been deprecated']);
 
 export default function AppEntryPoint() {

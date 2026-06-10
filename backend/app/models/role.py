@@ -28,11 +28,12 @@ class Permiso(Base):
     id = Column(Integer, primary_key=True, index=True)
     nombre = Column(String(100), unique=True, index=True, nullable=False)
     descripcion = Column(String(255), nullable=True)
-    estado = Column(Integer, default=1) # inactivo = 0, activo = 1
+    estado = Column(Integer, default=1)
     creado = Column(DateTime, server_default=func.now())
     modificado = Column(DateTime, server_default=func.now(), onupdate=func.now())
-    # Relacion ORM inversa hacia roles a traves de la tabla asociativa
-    roles = relationship("role", secondary="roles_permisos", back_populates="permisos")
+
+    # Relación con roles (muchos a muchos)
+    roles = relationship("Role", secondary="roles_permisos", back_populates="permisos")
 
 class Role(Base):
     """
@@ -44,8 +45,9 @@ class Role(Base):
     id = Column(Integer, primary_key=True, index=True)
     nombre = Column(String(50), unique=True, index=True, nullable=False)
     descripcion = Column(String(255), nullable=True)
-    estado = Column(Integer, default=1) # 0=inactivo, 1=activo
+    estado = Column(Integer, default=1)
     creado = Column(DateTime, server_default=func.now())
     modificado = Column(DateTime, server_default=func.now(), onupdate=func.now())
-    # Relacion ORM muchos a muchos
-    permisos = relationship("permiso", secondary="roles_permisos", back_populates="roles")
+
+    # Relación con permisos
+    permisos = relationship("Permiso", secondary="roles_permisos", back_populates="roles")

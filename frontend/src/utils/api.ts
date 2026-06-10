@@ -1,32 +1,26 @@
-// src/utils/api.ts
 import { API_HEADERS, BASE_URL } from '../constants/api';
-import { LoginRequest, UserResponse } from '../types/auth.types';
 import { getUserSession } from './storage';
 
-// ─── INTERFAZ DE PERMISOS (sincronizada con backend) ──────────────────────────────
-export interface Permisos {
-  dashboard: boolean;
-  clientes: boolean;
-  parametros: boolean;
-  reportes: boolean;
-  configuracion: boolean;
-  usuarios: boolean;
-  roles: boolean;
-  auditoria: boolean;
+
+// ==================================================================
+// TIPOS Y NUMEROS (Alineados con los schemras del backend)
+// ==================================================================
+
+export interface LoginRequest {
+  email: string;
+  password: string;
 }
 
-export interface Rol {
-  id: string;
-  nombre: string;
-  descripcion?: string;
-  estado?: number;
-  permisos: Permisos;
-  creado?: string;
+export interface TokenResponse {
+  access_token: string;
+  token_type: string;
 }
+
+// Usuario - Segun UserResponse del backend
 
 export interface Usuario {
-  id: string;
-  nombre: string;
+  id: number;
+  nombres: string;
   apellidos?: string;
   tipo_documento?: string;
   documento?: string;
@@ -35,184 +29,374 @@ export interface Usuario {
   municipio?: string;
   departamento?: string;
   email: string;
-  activo: boolean;
+  estado: number; // 1 activo, 0 inactivo
   rol_id: number;
-  rol_nombre?: string;
-  creado?: string;
-  password?: string; // solo para creación/actualización
+  empresa_id: number;
+  creado: string;
+  modificado?: string;
+  rol_nombre?: string; // campo añadido en la respuesta (opcional)
 }
 
-export interface LogAuditoria {
-  id: string;
-  fecha: string;
-  usuario: string;
-  accion: string;
-  modulo: String;
-  detalles: string;
+// Payload para crear usuario (UserCreate)
+export interface UsuarioCreate {
+  nombres: string;
+  apellidos?: string;
+  tipo_documento?: string;
+  documento?: string;
+  telefono?: string;
+  direccion?: string;
+  municipio?: string;
+  departamento?: string;
+  email: string;
+  password: string;
+  rol_id: number;
+  empresa_id: number;
 }
+
+// Payload para actualizar usuario (UserUpdate - Todos opcionales)
+export interface UsuarioUpdate {
+  nombres?: string;
+  apellidos?: string;
+  tipo_documento?: string;
+  documento?: string;
+  telefono?: string;
+  direccion?: string;
+  municipio?: string;
+  departamento?: string;
+  email?: string;
+  password?: string;
+  rol_id?: number;
+  estado?: number;
+} 
+
+
+// Rol - Segun RoleResponse del backend (incluye permisos anidados)
+export interface PermisoRelacion {
+  id: number;
+  nombre: string;
+  estado: number;
+}
+
+export interface Rol {
+  id: number;
+  nombre: string;
+  descripcion?: string;
+  estado: number;
+  creado: string;
+  modificado?: string;
+  permisos: PermisoRelacion[];
+}
+
+// Payload para crear rol (RoleCreate)
+export interface RolCreate {
+  nombre: string;
+  descripcion?: string;
+  estado?: number;
+}
+
+// Payload para actualizar rol (RoleUpdate)
+export interface RolUpdate {
+  nombre?: string;
+  descripcion?: string;
+  estado?: number;
+}
+
+// Permiso individual (para catálogo)
+export interface Permiso {
+  id: number;
+  nombre: string;
+  estado: number;
+  creado: string;
+  modificado?: string;
+}
+
+// Empresa – según EmpresaResponse
+export interface Empresa {
+  id: number;
+  naturaleza: 'natural' | 'juridica';
+  nombres?: string;
+  apellidos?: string;
+  razon_social?: string;
+  tipo_documento: 'CC' | 'NIT' | 'CE' | 'NUIP';
+  documento: string;
+  dv?: number;
+  direccion: string;
+  municipio: string;
+  departamento: string;
+  email: string;
+  telefono: string;
+  estado: number;
+  ruta_logo?: string;
+  creado: string;
+  modificado?: string;
+}
+
+// Payload para actualizar empresa (EmpresaUpdate)
+export interface EmpresaUpdate {
+  naturaleza?: 'natural' | 'juridica';
+  nombres?: string;
+  apellidos?: string;
+  razon_social?: string;
+  tipo_documento?: 'CC' | 'NIT' | 'CE' | 'NUIP';
+  documento?: string;
+  dv?: number;
+  direccion?: string;
+  municipio?: string;
+  departamento?: string;
+  email?: string;
+  telefono?: string;
+  estado?: number;
+  ruta_logo?: string;
+}
+
+// ==================================================================
+// FUNCION BASE PARA PETICIONES AUTENTICADAS
+// ==================================================================
+
+/*
+* Realiza una peticion HTTP inyectadno automaticamente el token JWT
+* obtenido del almacenamiento seguro.
+* Lanza un error si la respuesta no es ok
+*/
+
+async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  const session = await getUserSession();
+
+  const headers: Record<string, string> = {
+    ...API_HEADERS,
+    ...(options.headers as Record<string, string> || {}),
+  };
+
+  // Si existe una sesion activa, inyectamos el token para la validacion RBAC y Multi-Tenant del backend
+  if (session?.access_token) {
+    headers['Authorization'] = `Bearer ${session.access_token}`;
+  }
+
+  const response = await fetch(`${BASE_URL}${endpoint}`, {
+    ...options,
+    headers,
+  });
+
+  if (!response.ok) {
+    let errorMessage = `Error HTTP ${response.status}`;
+    try {
+      const errorData = await response.json();
+      errorMessage = errorData.detail || errorMessage; 
+    } catch {
+      // Si no se puede pasrsear JSON, se mantiene el mensaje por defecto
+    }
+    throw new Error(errorMessage);
+  }
+  // Si la respuesta es 204 No Content, retornar null o undefined segun convenga
+  if (response.status === 204) {
+    return undefined as T;
+  }
+  return response.json() as Promise<T>;
+};
+
+// ==================================================================
+// SERVICIO DE AUTENTICACION (Conectado con FastAPI)
+// ==================================================================
 
 /**
- * Recupera el token JWT desde la sesión cifrada de SecureStore
- */
-const getHeaders = async (): Promise<HeadersInit> => {
-  const session = await getUserSession();
-  const token = session?.access_token;
-  return {
-    ...API_HEADERS,
-    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-  };
-};
+ * Inicia sesion con email y contraseña
+ * Retorna el objeto TokenResponse (access_token, token_type) que luego
+ * debe guardarse con saveUserSession.
+ * @see loginUser en storage.ts 
+*/
 
-// ─── SERVICIO DE AUTENTICACIÓN ───────────────────────────────────────
-export const loginUser = async (credentials: LoginRequest): Promise<{ access_token: string; user: UserResponse }> => {
-  try {
-    const response = await fetch(`${BASE_URL}/api/auth/login`, {
-      method: 'POST',
-      headers: API_HEADERS,
-      body: JSON.stringify(credentials),
-    });
-    const data = await response.json();
-    if (!response.ok) {
-      throw new Error(data.detail || 'Error en el inicio de sesión');
+export const loginUser = async (credentials: LoginRequest): Promise<TokenResponse> => {
+  
+  const formData = new URLSearchParams();
+  formData.append('username', credentials.email);
+  formData.append('password', credentials.password);
+
+  const response = await fetch(`${BASE_URL}/api/auth/login`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: formData.toString(),
+  });
+
+  if (!response.ok) {
+    let errorMessage = 'Credenciales inválidas';
+    try {
+      const errorData = await response.json();
+      errorMessage = errorData.detail || errorMessage;
+    } catch {
+      // ignore
     }
-    // data = { access_token, token_type, user }
-    return data;
-  } catch (error: any) {
-    throw error;
+
+    throw new Error(errorMessage);
   }
+  return response.json() as Promise<TokenResponse>;
 };
 
-// ─── SERVICIOS DE USUARIOS ───────────────────────────────────────────
-export const obtenerUsuarios = async (): Promise<Usuario[]> => {
-  const headers = await getHeaders();
-  const response = await fetch(`${BASE_URL}/api/usuarios/`, { method: 'GET', headers });
-  if (!response.ok) throw new Error('Error al obtener el listado de usuarios');
-  const data = await response.json();
-  // Mapear estado: backend devuelve estado (1 activo, 0 inactivo)
-  return data.map((u: any) => ({ ...u, activo: u.estado === 1 }));
+// ==================================================================
+// USUARIOS (CRUD + cambio de estado)
+// ==================================================================
+
+/**
+ * Obtiene la lista de usuarios de la empresa del usuario autenticado
+ * Los analistas no tienen acceso; los coordinadores / supervisores no ven al administrador
+*/
+export const obtenerUsuarios = async (skip = 0, limit = 100): Promise<Usuario[]> => {
+  return apiRequest<Usuario[]>(`/api/usuarios?skip=${skip}&limit=${limit}`);
 };
 
-export const eliminarUsuario = async (id: string): Promise<void> => {
-  const headers = await getHeaders();
-  const response = await fetch(`${BASE_URL}/api/usuarios/${id}`, { method: 'DELETE', headers });
-  if (!response.ok) throw new Error('No se pudo eliminar el usuario');
+/***
+ * Crear un usuario nuevo
+ * @param usuarioData - Debe incluir empresa_id. rol_id, password
+*/
+export const crearUsuario = async (usuarioData: UsuarioCreate): Promise<Usuario> => {
+  return apiRequest<Usuario>('/api/usuarios', {
+    method: 'POST',
+    body: JSON.stringify(usuarioData),
+  });
 };
 
-export const cambiarEstadoUsuario = async (id: string, activo: boolean): Promise<Usuario> => {
-  const headers = await getHeaders();
-  // ✅ Enviar el parámetro en la URL (query string)
-  const response = await fetch(`${BASE_URL}/api/usuarios/${id}/estado?activo=${activo}`, {
+/***
+ * Actualiza parcialmente un usuario existente
+ * @param userIDd - ID del usuario a actualizar
+ * @param usuarioData - Campos a modificar (todos opcionales)
+*/
+export const actualizarUsuario = async (userId: number, usuarioData: UsuarioUpdate): Promise<Usuario> => {
+  return apiRequest<Usuario>(`/api/usuarios/${userId}`, {
     method: 'PATCH',
-    headers,
-    // Sin cuerpo (body)
+    body: JSON.stringify(usuarioData),
   });
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.detail || 'Error al cambiar estado del usuario');
-  }
-  const data = await response.json();
-  return { ...data, activo: data.estado === 1 };
 };
 
-// ✅ CORRECCIÓN: URL corregida (plural) y password se envía siempre (si existe)
-export const crearUsuario = async (usuario: Omit<Usuario, 'id' | 'creado' | 'rol_nombre'>): Promise<Usuario> => {
-  const headers = await getHeaders();
-  const payload = {
-    ...usuario,
-    estado: usuario.activo ? 1 : 0,
-    // Si no viene password (edición) se envía un string vacío (backend lo ignorará si no cambia)
-    password: usuario.password || '',
-    rol_id: usuario.rol_id
-  };
-  const response = await fetch(`${BASE_URL}/api/usuarios/`, {  // 🔁 plural
+/***
+ * Elimina logicamente un usuario (Soft Delete, estado = 0)
+ * @param userIDd - ID del usuario a eliminar
+*/
+export const eliminarUsuario = async (userId: number): Promise<Usuario> => {
+  return apiRequest<Usuario>(`/api/usuarios/${userId}`, {
+    method: 'DELETE',
+  });
+};
+
+/***
+ * Cambia el estado activo / inactivo de un usuario
+ * @param userIDd - ID del usuario
+ * @param activo - true para activar (estado=1), fasle para desactivar (estado=0)
+*/
+export const cambiarEstadoUsuario = async (userId: number, activo: boolean): Promise<Usuario> => {
+  return apiRequest<Usuario>(`/api/usuarios${userId}/estado?activo=${activo}`, {
+    method: 'PATCH',
+  });
+};
+
+// ============================================================================
+// ROLES Y PERMISOS
+// ============================================================================
+
+/**
+ * Obtiene todos los roles (solo administrador).
+ */
+export const obtenerRoles = async (skip = 0, limit = 100): Promise<Rol[]> => {
+  return apiRequest<Rol[]>(`/api/roles?skip=${skip}&limit=${limit}`);
+};
+
+/**
+ * Obtiene un rol por su ID.
+ */
+export const obtenerRolPorId = async (rolId: number): Promise<Rol> => {
+  return apiRequest<Rol>(`/api/roles/${rolId}`);
+};
+
+/**
+ * Crea un nuevo rol.
+ */
+export const crearRol = async (rolData: RolCreate): Promise<Rol> => {
+  return apiRequest<Rol>('/api/roles', {
     method: 'POST',
-    headers,
-    body: JSON.stringify(payload),
+    body: JSON.stringify(rolData),
   });
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.detail || 'Error al crear el usuario');
-  }
-  const data = await response.json();
-  return { ...data, activo: data.estado === 1 };
 };
 
-export const actualizarUsuario = async (id: string, usuario: Omit<Usuario, 'id' | 'creado' | 'rol_nombre'>): Promise<Usuario> => {
-  const headers = await getHeaders();
-  const payload = {
-    ...usuario,
-    estado: usuario.activo ? 1 : 0,
-    rol_id: usuario.rol_id,
-    // Si la contraseña no se envía (vacía), el backend debería omitirla.
-    // Por ahora la enviamos tal cual (puede ser vacía)
-    password: usuario.password || ''
-  };
-  const response = await fetch(`${BASE_URL}/api/usuarios/${id}`, {
-    method: 'PUT',
-    headers,
-    body: JSON.stringify(payload),
+/**
+ * Actualiza parcialmente un rol.
+ */
+export const actualizarRol = async (rolId: number, rolData: RolUpdate): Promise<Rol> => {
+  return apiRequest<Rol>(`/api/roles/${rolId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(rolData),
   });
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.detail || 'Error al actualizar el usuario');
-  }
-  const data = await response.json();
-  return { ...data, activo: data.estado === 1 };
 };
 
-// ─── SERVICIOS DE ROLES (sin cambios) ─────────────────────────────────
-export const obtenerRoles = async (): Promise<Rol[]> => {
-  const headers = await getHeaders();
-  const response = await fetch(`${BASE_URL}/api/roles/`, { method: 'GET', headers });
-  if (!response.ok) {
-    console.error(`Error en /api/roles. Status: ${response.status}`);
-    throw new Error('Error al obtener los roles del sistema');
-  }
-  return await response.json();
+/**
+ * Elimina lógicamente un rol (estado=0).
+ */
+export const eliminarRol = async (rolId: number): Promise<Rol> => {
+  return apiRequest<Rol>(`/api/roles/${rolId}`, {
+    method: 'DELETE',
+  });
 };
 
-export const crearRol = async (rol: Omit<Rol, 'id' | 'creado'>): Promise<Rol> => {
-  const headers = await getHeaders();
-  const response = await fetch(`${BASE_URL}/api/roles/`, {
+/**
+ * Obtiene el catálogo maestro de permisos (solo administrador).
+ */
+export const obtenerPermisos = async (skip = 0, limit = 100): Promise<Permiso[]> => {
+  return apiRequest<Permiso[]>('/api/roles/permisos');
+};
+
+/**
+ * Asigna (sincroniza) una lista de IDs de permisos a un rol.
+ * Reemplaza cualquier asignación previa.
+ * @param rolId - ID del rol
+ * @param permisosIds - Array de números con los IDs de los permisos a asignar
+ */
+export const asignarPermisosARol = async (rolId: number, permisosIds: number[]): Promise<void> => {
+  // El backend espera un array en el body, no en JSON anidado.
+  return apiRequest<void>(`/api/roles/${rolId}/permisos`, {
     method: 'POST',
-    headers,
-    body: JSON.stringify(rol)
+    body: JSON.stringify(permisosIds),
   });
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.detail || 'Error al crear el rol');
-  }
-  return await response.json();
 };
 
-export const actualizarRol = async (id: string, rol: Omit<Rol, 'id' | 'creado'>): Promise<Rol> => {
-  const headers = await getHeaders();
-  const response = await fetch(`${BASE_URL}/api/roles/${id}`, {
-    method: 'PUT',
-    headers,
-    body: JSON.stringify(rol)
-  });
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.detail || 'Error al actualizar el rol');
-  }
-  return await response.json();
+// ============================================================================
+// EMPRESAS (perfil de la empresa del usuario autenticado)
+// ============================================================================
+
+/**
+ * Obtiene los datos de la empresa asociada al usuario autenticado.
+ */
+export const obtenerEmpresaActual = async (): Promise<Empresa> => {
+  return apiRequest<Empresa>('/api/empresas/me');
 };
 
-export const eliminarRol = async (id: string): Promise<Rol> => {
-  const headers = await getHeaders();
-  const response = await fetch(`${BASE_URL}/api/roles/${id}`, { method: 'DELETE', headers });
-  if (!response.ok) throw new Error('No se pudo eliminar el rol seleccionado');
-  return await response.json();
+/**
+ * Actualiza parcialmente los datos de la empresa del usuario autenticado.
+ * Solo accesible para administradores.
+ */
+export const actualizarEmpresa = async (empresaData: EmpresaUpdate): Promise<Empresa> => {
+  return apiRequest<Empresa>('/api/empresas/me', {
+    method: 'PATCH',
+    body: JSON.stringify(empresaData),
+  });
 };
 
-// ─── SERVICIOS DE AUDITORÍA ──────────────────────────────────────────
-export const obtenerLogsAuditoria = async (): Promise<LogAuditoria[]> => {
-  const headers = await getHeaders();
-  const response = await fetch(`${BASE_URL}/api/auditoria/`, {
-    method: 'GET',
-    headers
+// ============================================================================
+// FUNCIÓN PARA OBTENER EL PERFIL DEL USUARIO AUTENTICADO (YA EXISTE EN storage.ts, pero añadimos conveniencia)
+// ============================================================================
+
+/**
+ * Obtiene los datos del usuario autenticado directamente desde el backend.
+ * Útil cuando se necesita información actualizada (no solo la almacenada en SecureStore).
+ */
+export const obtenerMiPerfil = async (): Promise<Usuario> => {
+  return apiRequest<Usuario>('/api/usuarios/me');
+};
+
+/**
+ * Actualiza el perfil del propio usuario autenticado.
+ */
+export const actualizarMiPerfil = async (usuarioData: UsuarioUpdate): Promise<Usuario> => {
+  return apiRequest<Usuario>('/api/usuarios/me', {
+    method: 'PATCH',
+    body: JSON.stringify(usuarioData),
   });
-  if (!response.ok) throw new Error('Error al obtener logs de auditoria');
-  return await response.json();
 };

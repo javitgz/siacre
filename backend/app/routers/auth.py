@@ -50,7 +50,7 @@ def iniciar_sesion(
 
     # 5. Inyectar claims informativos esenciales dentro del JWT para evitar consultas repetitivas a la BD
     token_data = {
-        'sub': usuario.email,
+        'sub': str(usuario.id),
         'empresa_id': usuario.empresa_id,
         'user_id': usuario.id,
         'nombres': usuario.nombres,

@@ -20,15 +20,12 @@ class User(Base):
     municipio = Column(String(100), nullable=False)
     departamento = Column(String(100), nullable=False)
     email = Column(String(100), unique=True, index=True, nullable=False)
-    password = Column(String(255), nullable=False)
-    estado = Column(Integer, default=1) # 1=activo, 0=inactivo
+    hashed_password = Column(String(255), nullable=False)  # ← cambiar de 'password' a 'hashed_password'
+    estado = Column(Integer, default=1)
     rol_id = Column(Integer, ForeignKey("roles.id"), nullable=False)
     empresa_id = Column(Integer, ForeignKey("empresas.id", ondelete="RESTRICT"), nullable=False)
     creado = Column(DateTime, server_default=func.now())
     modificado = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
-    # Relación ORM para cargar datos del Rol
     rol = relationship("Role")
-
-    # Relacion ORM para interctuar directamente con los datos de la empresa asignada
-    empresa = relationship("empresa", back_populates="usuarios")
+    empresa = relationship("Empresa", back_populates="usuarios")
