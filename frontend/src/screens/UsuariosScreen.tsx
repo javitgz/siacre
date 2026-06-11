@@ -1,35 +1,33 @@
+// frontend/src/screens/UsuariosScreen.tsx
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { StackScreenProps } from '@react-navigation/stack';
 import React, { useCallback, useState } from 'react';
 import {
-    RefreshControl,
-    Alert as RNAlert,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  RefreshControl,
+  Alert as RNAlert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import Alert from '../components/Alert';
 import BottomNavigation from '../components/BottomNavigation';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { colors } from '../styles/globalStyles';
-import {
-    cambiarEstadoUsuario,
-    eliminarUsuario,
-    obtenerUsuarios,
-    Usuario,
-} from '../utils/api';
+import { cambiarEstadoUsuario, eliminarUsuario, obtenerUsuarios, Usuario } from '../utils/api';
+import { getUserSession } from '../utils/storage';
 
 type Props = StackScreenProps<RootStackParamList, 'Usuarios'>;
 
 export default function UsuariosScreen({ navigation }: Props) {
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
-  const [refreshing, setRefreshing] = useState<boolean>(false);
-  const [alertVisible, setAlertVisible] = useState<boolean>(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [alertVisible, setAlertVisible] = useState(false);
   const [alertTipo, setAlertTipo] = useState<'positivo' | 'negativo'>('positivo');
-  const [alertMensaje, setAlertMensaje] = useState<string>('');
+  const [alertMensaje, setAlertMensaje] = useState('');
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
 
   const mostrarAlerta = (tipo: 'positivo' | 'negativo', mensaje: string) => {
     setAlertTipo(tipo);
@@ -41,6 +39,11 @@ export default function UsuariosScreen({ navigation }: Props) {
     try {
       const datosServer = await obtenerUsuarios();
       setUsuarios(datosServer);
+      // Obtener el id del usuario actual
+      const session = await getUserSession();
+      if (session?.user?.id) {
+        setCurrentUserId(parseInt(session.user.id));
+      }
     } catch (error: any) {
       console.error('Error cargando usuarios:', error);
       mostrarAlerta('negativo', error.message || 'Error de conexión con el servidor');
@@ -88,7 +91,7 @@ export default function UsuariosScreen({ navigation }: Props) {
   };
 
   const handleToggleActivo = async (usuario: Usuario) => {
-    const nuevoEstado = usuario.estado === 0; // backend: 1 activo, 0 inactivo
+    const nuevoEstado = usuario.estado === 0;
     try {
       await cambiarEstadoUsuario(usuario.id, nuevoEstado);
       setUsuarios((prev) =>
@@ -102,21 +105,21 @@ export default function UsuariosScreen({ navigation }: Props) {
     }
   };
 
+  // Verificar si el usuario actual es administrador y el target es él mismo
+  const isSelf = (usuarioId: number) => currentUserId === usuarioId;
+
   return (
     <View style={styles.container}>
       <Alert visible={alertVisible} tipo={alertTipo} mensaje={alertMensaje} onHide={() => setAlertVisible(false)} />
-      <View style={styles.headerAzul}>
-        <View style={styles.bienvenida}>
-          <View>
-            <Text style={[styles.textoBlanco, styles.nombrePequeño]}>Bienvenido</Text>
-            <Text style={[styles.textoBlanco, styles.nombre]}>Javier Tamayo</Text>
-          </View>
-          <TouchableOpacity onPress={handleAgregar} activeOpacity={0.7}>
-            <Ionicons name="add-circle" size={28} color={colors.blanco} />
-          </TouchableOpacity>
-        </View>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color={colors.blanco} />
+        </TouchableOpacity>
+        <Text style={[styles.textoBlanco, styles.titulo]}>Usuarios</Text>
+        <TouchableOpacity onPress={handleAgregar} style={styles.addButton}>
+          <Ionicons name="add-circle" size={28} color={colors.blanco} />
+        </TouchableOpacity>
       </View>
-
       <View style={styles.fondoBlanco}>
         <ScrollView
           showsVerticalScrollIndicator={false}
@@ -133,7 +136,6 @@ export default function UsuariosScreen({ navigation }: Props) {
               <Text style={styles.botonAccionTexto}>Auditoría</Text>
             </TouchableOpacity>
           </View>
-
           {usuarios.length === 0 ? (
             <View style={styles.emptyState}>
               <Ionicons name="people-outline" size={50} color={colors.gris} />
@@ -157,16 +159,19 @@ export default function UsuariosScreen({ navigation }: Props) {
                   <TouchableOpacity style={[styles.botonAccionIcono, styles.botonEditar]} onPress={() => handleEditar(usuario)} activeOpacity={0.7}>
                     <Ionicons name="pencil" size={18} color={colors.blanco} />
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[
-                      styles.botonAccionIcono,
-                      usuario.estado === 1 ? styles.botonActivar : styles.botonDesactivar,
-                    ]}
-                    onPress={() => handleToggleActivo(usuario)}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons name={usuario.estado === 1 ? 'lock-open' : 'lock-closed'} size={18} color={colors.blanco} />
-                  </TouchableOpacity>
+                  {/* Deshabilitar el botón si es el propio usuario */}
+                  {!isSelf(usuario.id) && (
+                    <TouchableOpacity
+                      style={[
+                        styles.botonAccionIcono,
+                        usuario.estado === 1 ? styles.botonActivar : styles.botonDesactivar,
+                      ]}
+                      onPress={() => handleToggleActivo(usuario)}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name={usuario.estado === 1 ? 'lock-open' : 'lock-closed'} size={18} color={colors.blanco} />
+                    </TouchableOpacity>
+                  )}
                   <TouchableOpacity style={[styles.botonAccionIcono, styles.botonEliminar]} onPress={() => handleEliminar(usuario)} activeOpacity={0.7}>
                     <Ionicons name="trash" size={18} color={colors.blanco} />
                   </TouchableOpacity>
@@ -176,20 +181,18 @@ export default function UsuariosScreen({ navigation }: Props) {
           )}
         </ScrollView>
       </View>
-
       <BottomNavigation navigation={navigation} currentScreen="Usuarios" />
     </View>
   );
 }
 
-// Los estilos son exactamente los originales, no se modifican
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.azulOscuro },
-  headerAzul: { backgroundColor: colors.azulOscuro },
-  bienvenida: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: 60, paddingBottom: 17 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: 60, paddingBottom: 17 },
+  backButton: { padding: 8 },
   textoBlanco: { color: colors.blanco },
-  nombrePequeño: { fontSize: 12 },
-  nombre: { fontSize: 14, fontWeight: 'bold' },
+  titulo: { fontSize: 18, fontWeight: 'bold' },
+  addButton: { padding: 8 },
   fondoBlanco: { flex: 1, backgroundColor: colors.blanco, borderTopLeftRadius: 25, borderTopRightRadius: 25, marginTop: -8, paddingTop: 16 },
   botonesAccion: { flexDirection: 'row', paddingHorizontal: 16, marginBottom: 16, gap: 8 },
   botonAccion: { flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: 'center' },

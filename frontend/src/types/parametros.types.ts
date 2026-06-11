@@ -1,4 +1,3 @@
-// INTERFAZ DEL MODELO PARAMETRO
 export interface Parametro { 
     id: string,
     nombre: string;

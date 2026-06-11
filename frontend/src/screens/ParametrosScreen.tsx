@@ -16,7 +16,7 @@ import Alert from '../components/Alert';
 import BottomNavigation from '../components/BottomNavigation';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { colors } from '../styles/globalStyles';
-import { Parametro } from '../types/parametros';
+import { Parametro } from '../types/parametros.types';
 
 type Props = StackScreenProps<RootStackParamList, 'Parametros'>;
 type TipoParametro = 'cualitativo' | 'cuantitativo';

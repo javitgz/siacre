@@ -16,7 +16,7 @@ import {
 import Alert from '../components/Alert';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { colors } from '../styles/globalStyles';
-import { Parametro } from '../types/parametros';
+import { Parametro } from '../types/parametros.types';
 
 type Props = StackScreenProps<RootStackParamList, 'FormularioParametro'>;
 

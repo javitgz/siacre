@@ -7,10 +7,14 @@ import ResultadoScreen from '../screens/ResultadoScreen';
 import SplashScreen from '../screens/SplashScreen';
 // Pantallas de administracion y gestión
 import AuditoriaScreen from '../screens/AuditoriaScreen';
+import FormularioNaturalezaScreen from '../screens/FormularioNaturalezaScreen';
 import FormularioParametroScreen from '../screens/FormularioParametroScreen';
+import FormularioPermisoScreen from '../screens/FormularioPermisoScreen';
 import FormularioRolScreen from '../screens/FormularioRolScreen';
 import FormularioUsuarioScreen from '../screens/FormularioUsuarioScreen';
+import NaturalezasScreen from '../screens/NaturalezasScreen';
 import ParametrosScreen from '../screens/ParametrosScreen';
+import PermisosScreen from '../screens/PermisosScreen';
 import RolesScreen from '../screens/RolesScreen';
 import UsuariosScreen from '../screens/UsuariosScreen';
 // Estilos generales
@@ -37,6 +41,10 @@ export type RootStackParamList = {
   FormularioRol: { rolExistente?: any } | undefined;
   FormularioParametro: { tipo_parametro: 'cualitativo' | 'cuantitativo'; parametro_existente?: any } | undefined;
   // Agregar mas pantallas
+  Permisos: undefined;
+  FormularioPermiso: { permisoExistente?: any } | undefined;
+  Naturalezas: undefined;
+  FormularioNaturaleza: { naturalezaExistente?: any } | undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -55,13 +63,17 @@ export default function AppNavigator() {
         <Stack.Screen name='Dashboard' component={DashboardScreen}/>
         <Stack.Screen name='Resultado' component={ResultadoScreen}/>
         {/* Pantallas de gestión */}
-        <Stack.Screen name="Usuarios" component={UsuariosScreen} />
-        <Stack.Screen name="Roles" component={RolesScreen} />
-        <Stack.Screen name="Auditoria" component={AuditoriaScreen} />
-        <Stack.Screen name="Parametros" component={ParametrosScreen} />
-        <Stack.Screen name="FormularioUsuario" component={FormularioUsuarioScreen} />
-        <Stack.Screen name="FormularioRol" component={FormularioRolScreen} />
-        <Stack.Screen name="FormularioParametro" component={FormularioParametroScreen} />
+        <Stack.Screen name='Usuarios' component={UsuariosScreen} />
+        <Stack.Screen name='Roles' component={RolesScreen} />
+        <Stack.Screen name='Auditoria' component={AuditoriaScreen} />
+        <Stack.Screen name='Parametros' component={ParametrosScreen} />
+        <Stack.Screen name='FormularioUsuario' component={FormularioUsuarioScreen} />
+        <Stack.Screen name='FormularioRol' component={FormularioRolScreen} />
+        <Stack.Screen name='FormularioParametro' component={FormularioParametroScreen} />
+        <Stack.Screen name='Permisos' component={PermisosScreen}/>
+        <Stack.Screen name='FormularioPermiso' component={FormularioPermisoScreen}/>
+        <Stack.Screen name="Naturalezas" component={NaturalezasScreen} />
+        <Stack.Screen name="FormularioNaturaleza" component={FormularioNaturalezaScreen} />
         {/* Agregar mas pantallas sgun el avance */}
     </Stack.Navigator>
   )

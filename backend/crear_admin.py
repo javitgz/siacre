@@ -1,4 +1,3 @@
-# backend/crear_admin.py (versión robusta)
 import sys, os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from sqlalchemy import create_engine, text
@@ -11,7 +10,7 @@ def init_db():
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     db = SessionLocal()
     try:
-        # Empresa
+        # 1. Empresa
         empresa_id = None
         result = db.execute(text("SELECT id FROM empresas WHERE documento = '900000001'")).first()
         if not result:
@@ -26,7 +25,19 @@ def init_db():
             empresa_id = result[0]
             print("ℹ️ Empresa ya existe")
 
-        # Permisos
+        # 2. Naturalezas
+        naturales = ["natural", "juridica"]
+        for nat in naturales:
+            result = db.execute(text("SELECT id FROM naturalezas WHERE nombre = :nombre"), {"nombre": nat}).first()
+            if not result:
+                db.execute(text("INSERT INTO naturalezas (nombre, descripcion, estado) VALUES (:nombre, :desc, 1)"),
+                           {"nombre": nat, "desc": f"Naturaleza {nat}"})
+                db.commit()
+                print(f"✅ Naturaleza {nat} creada")
+            else:
+                print(f"ℹ️ Naturaleza {nat} ya existe")
+
+        # 3. Permisos
         permisos = ["dashboard", "clientes", "parametros", "reportes", "configuracion", "usuarios", "roles", "auditoria"]
         permisos_ids = {}
         for p in permisos:
@@ -41,7 +52,7 @@ def init_db():
             else:
                 permisos_ids[p] = result[0]
 
-        # Roles
+        # 4. Roles
         roles_data = {
             "administrador": permisos,
             "coordinador": ["dashboard", "clientes", "reportes", "usuarios", "auditoria"],
@@ -65,7 +76,7 @@ def init_db():
                 roles_ids[rol_nombre] = result[0]
                 print(f"ℹ️ Rol {rol_nombre} ya existe")
 
-        # Usuario admin
+        # 5. Usuario administrador
         result = db.execute(text("SELECT id FROM usuarios WHERE email = 'admin@siacre.com'")).first()
         if not result:
             hashed = get_password_hash("admin123")

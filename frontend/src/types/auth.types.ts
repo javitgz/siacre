@@ -3,11 +3,7 @@ export interface LoginRequest {
   password: string;
 }
 
-export interface UserResponse {
-  id: number;
-  nombre: string;
-  email: string;
-  estado: number;
-  rol_id: number;
-  creado: string; // O Date para parsearlo
+export interface TokenResponse {
+  access_token: string;
+  token_type: string;
 }
