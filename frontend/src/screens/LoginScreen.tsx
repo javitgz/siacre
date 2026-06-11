@@ -73,6 +73,7 @@ export default function LoginScreen({ navigation }: Props) {
           nombre: perfil.nombres,
           email: perfil.email,
           rol_id: perfil.rol_id.toString(),
+          rol_nombre: perfil.rol_nombre || '',  // ← añadir esto
           empresa_id: perfil.empresa_id.toString(),
         }
       });

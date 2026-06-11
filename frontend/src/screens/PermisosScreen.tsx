@@ -1,10 +1,13 @@
 // frontend/src/screens/PermisosScreen.tsx
+// Barra de navegación superior: Usuarios, Roles, Auditoría, Permisos
+// Sin Naturalezas
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { StackScreenProps } from '@react-navigation/stack';
 import React, { useCallback, useState } from 'react';
 import { Alert as RNAlert, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Alert from '../components/Alert';
+import BottomNavigation from '../components/BottomNavigation';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { colors } from '../styles/globalStyles';
 import { Permiso, eliminarPermiso, obtenerPermisos } from '../utils/api';
@@ -65,15 +68,26 @@ export default function PermisosScreen({ navigation }: Props) {
     <View style={styles.container}>
       <Alert visible={alertVisible} tipo={alertTipo} mensaje={alertMensaje} onHide={() => setAlertVisible(false)} />
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={colors.blanco} />
-        </TouchableOpacity>
         <Text style={[styles.textoBlanco, styles.titulo]}>Permisos</Text>
         <TouchableOpacity onPress={handleAgregar} style={styles.addButton}>
           <Ionicons name="add-circle" size={28} color={colors.blanco} />
         </TouchableOpacity>
       </View>
       <View style={styles.fondoBlanco}>
+        <View style={styles.botonesAccion}>
+          <TouchableOpacity style={[styles.botonAccion, styles.botonSecundario]} onPress={() => navigation.navigate('Usuarios')}>
+            <Text style={styles.botonAccionTexto}>Usuarios</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.botonAccion, styles.botonSecundario]} onPress={() => navigation.navigate('Roles')}>
+            <Text style={styles.botonAccionTexto}>Roles</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.botonAccion, styles.botonSecundario]} onPress={() => navigation.navigate('Auditoria')}>
+            <Text style={styles.botonAccionTexto}>Auditoría</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.botonAccion, styles.botonPrimary]} disabled={true}>
+            <Text style={styles.botonAccionTexto}>Permisos</Text>
+          </TouchableOpacity>
+        </View>
         <ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
           {permisos.length === 0 ? (
             <View style={styles.emptyState}>
@@ -103,6 +117,7 @@ export default function PermisosScreen({ navigation }: Props) {
           )}
         </ScrollView>
       </View>
+      <BottomNavigation navigation={navigation} currentScreen="Permisos" />
     </View>
   );
 }
@@ -110,11 +125,15 @@ export default function PermisosScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.azulOscuro },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: 60, paddingBottom: 17 },
-  backButton: { padding: 8 },
   textoBlanco: { color: colors.blanco },
   titulo: { fontSize: 18, fontWeight: 'bold' },
   addButton: { padding: 8 },
   fondoBlanco: { flex: 1, backgroundColor: colors.blanco, borderTopLeftRadius: 25, borderTopRightRadius: 25, marginTop: -8, paddingTop: 16 },
+  botonesAccion: { flexDirection: 'row', paddingHorizontal: 16, marginBottom: 16, gap: 8 },
+  botonAccion: { flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: 'center' },
+  botonPrimary: { backgroundColor: colors.azulClaro },
+  botonSecundario: { backgroundColor: colors.grisAzulado },
+  botonAccionTexto: { color: colors.blanco, fontSize: 12, fontWeight: '500' },
   itemCard: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#f8f9fa', borderRadius: 12, padding: 14, marginHorizontal: 16, marginBottom: 12, borderWidth: 1, borderColor: '#e9ecef' },
   itemInfo: { flex: 1 },
   itemNombre: { fontSize: 16, fontWeight: 'bold', color: colors.azulOscuro },

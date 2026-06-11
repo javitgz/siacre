@@ -1,5 +1,7 @@
 // frontend/src/screens/RolesScreen.tsx
-// COMPLETO – se añaden botones de navegación a Permisos y Naturalezas
+// - Añadido BottomNavigation
+// - Quitada flecha atrás
+// - Botón "+" circular
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { StackScreenProps } from '@react-navigation/stack';
@@ -14,13 +16,13 @@ import {
   View,
 } from 'react-native';
 import Alert from '../components/Alert';
+import BottomNavigation from '../components/BottomNavigation';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { colors } from '../styles/globalStyles';
 import { eliminarRol, obtenerRoles, PermisoRelacion, Rol } from '../utils/api';
 
 type Props = StackScreenProps<RootStackParamList, 'Roles'>;
 
-// Mapeo de módulos para mostrar permisos
 const modulos: { id: string; nombre: string; icono: React.ComponentProps<typeof Ionicons>['name'] }[] = [
   { id: 'dashboard', nombre: 'dashboard', icono: 'home-outline' },
   { id: 'clientes', nombre: 'clientes', icono: 'briefcase-outline' },
@@ -92,15 +94,11 @@ export default function RolesScreen({ navigation }: Props) {
     <View style={styles.container}>
       <Alert visible={alertVisible} tipo={alertTipo} mensaje={alertMensaje} onHide={() => setAlertVisible(false)} />
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={colors.blanco} />
-        </TouchableOpacity>
         <Text style={[styles.textoBlanco, styles.titulo]}>Roles</Text>
         <TouchableOpacity onPress={handleAgregar} style={styles.addButton}>
           <Ionicons name="add-circle" size={28} color={colors.blanco} />
         </TouchableOpacity>
       </View>
-
       <View style={styles.fondoBlanco}>
         <ScrollView
           showsVerticalScrollIndicator={false}
@@ -116,7 +114,6 @@ export default function RolesScreen({ navigation }: Props) {
             <TouchableOpacity style={[styles.botonAccion, styles.botonSecundario]} onPress={() => navigation.navigate('Auditoria')}>
               <Text style={styles.botonAccionTexto}>Auditoría</Text>
             </TouchableOpacity>
-            {/* NUEVOS BOTONES */}
             <TouchableOpacity style={[styles.botonAccion, styles.botonSecundario]} onPress={() => navigation.navigate('Permisos')}>
               <Text style={styles.botonAccionTexto}>Permisos</Text>
             </TouchableOpacity>
@@ -124,7 +121,6 @@ export default function RolesScreen({ navigation }: Props) {
               <Text style={styles.botonAccionTexto}>Naturalezas</Text>
             </TouchableOpacity>
           </View>
-
           {roles.length === 0 ? (
             <View style={styles.emptyState}>
               <Ionicons name="key-outline" size={50} color={colors.gris} />
@@ -167,6 +163,7 @@ export default function RolesScreen({ navigation }: Props) {
           )}
         </ScrollView>
       </View>
+      <BottomNavigation navigation={navigation} currentScreen="Roles" />
     </View>
   );
 }
@@ -174,7 +171,6 @@ export default function RolesScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.azulOscuro },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: 60, paddingBottom: 17 },
-  backButton: { padding: 8 },
   textoBlanco: { color: colors.blanco },
   titulo: { fontSize: 18, fontWeight: 'bold' },
   addButton: { padding: 8 },

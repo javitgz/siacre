@@ -1,10 +1,14 @@
 // frontend/src/screens/NaturalezasScreen.tsx
+// - Añadido BottomNavigation
+// - Quitada flecha atrás
+// - Botón "+" circular
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { StackScreenProps } from '@react-navigation/stack';
 import React, { useCallback, useState } from 'react';
 import { RefreshControl, Alert as RNAlert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Alert from '../components/Alert';
+import BottomNavigation from '../components/BottomNavigation';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { colors } from '../styles/globalStyles';
 import { eliminarNaturaleza, Naturaleza, obtenerNaturalezas } from '../utils/api';
@@ -65,12 +69,9 @@ export default function NaturalezasScreen({ navigation }: Props) {
     <View style={styles.container}>
       <Alert visible={alertVisible} tipo={alertTipo} mensaje={alertMensaje} onHide={() => setAlertVisible(false)} />
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={colors.blanco} />
-        </TouchableOpacity>
         <Text style={[styles.textoBlanco, styles.titulo]}>Naturalezas</Text>
         <TouchableOpacity onPress={handleAgregar} style={styles.addButton}>
-          <Ionicons name="add" size={24} color={colors.blanco} />
+          <Ionicons name="add-circle" size={28} color={colors.blanco} />
         </TouchableOpacity>
       </View>
       <View style={styles.fondoBlanco}>
@@ -103,6 +104,7 @@ export default function NaturalezasScreen({ navigation }: Props) {
           )}
         </ScrollView>
       </View>
+      <BottomNavigation navigation={navigation} currentScreen="Naturalezas" />
     </View>
   );
 }
@@ -110,7 +112,6 @@ export default function NaturalezasScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.azulOscuro },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: 60, paddingBottom: 17 },
-  backButton: { padding: 8 },
   textoBlanco: { color: colors.blanco },
   titulo: { fontSize: 18, fontWeight: 'bold' },
   addButton: { padding: 8 },
