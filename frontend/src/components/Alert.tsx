@@ -1,12 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useRef } from 'react';
 import {
-    Animated,
-    PanResponder,
-    PanResponderGestureState,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
+  Animated,
+  PanResponder,
+  PanResponderGestureState,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
 } from 'react-native';
 import { colors } from '../styles/globalStyles';
 

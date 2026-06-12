@@ -10,6 +10,10 @@ from app.models.empresa import Empresa, NaturalezaEnum, TipoDocumentoEnum
 from app.models.user import User
 from app.models.naturaleza import Naturaleza
 from app.models.auditoria import Auditoria
+from app.models.nucleo_variable import NucleoVariable, TipoVariableEnum
+from app.models.parametro import Parametro, TipoMedicionEnum
+from app.models.score import Score
+from app.models.escenario import Escenario, TipoEscenarioEnum
 
 # al declarar __all__, deifinimos con precision que clases se exportarán
 # cuando se ejecute un "from app.models import *"
@@ -24,5 +28,10 @@ __all__ = [
     'TipoDocumentoEnum',
     'User',
     'Naturaleza',
-    'Auditoria'
+    'Auditoria',
+    'nucleo_variable',
+    'TipoVariableEnum',
+    'Parametro',
+    'TipoMedicionEnum',
+    'Score'
 ]

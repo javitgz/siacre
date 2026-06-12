@@ -1,10 +1,36 @@
-export interface Parametro { 
-    id: string,
-    nombre: string;
-    descripcion: string;
-    peso?: number;
-    tipo_medicion?: 'meta' | 'rango' | string;
-    valor_meta?: string;
-    rango_min?: string;
-    rango_max?: string;
+export interface Parametro {
+  id: number;
+  codigo: string;
+  nombre: string;
+  caracteristica_medida: string;
+  tipo:  'selector' | 'rango'; // ajusta según tu backend
+  puntos_maximos: number;
+  interpretacion?: string;
+  nucleo_id: number;
+  naturaleza_id: number;
+  estado: number;
+  modificado?: string;
+}
+
+export interface ParametroCreate {
+  codigo: string;
+  nombre: string;
+  caracteristica_medida?: string;
+  tipo: 'selector' | 'rango';
+  puntos_maximos: number;
+  interpretacion?: string;
+  nucleo_id: number;
+  naturaleza_id: number;
+}
+
+export interface ParametroUpdate {
+  codigo?: string;
+  nombre?: string;
+  caracteristica_medida?: string;
+  tipo?: 'selector' | 'rango';
+  puntos_maximos?: number;
+  interpretacion?: string;
+  nucleo_id?: number;
+  naturaleza_id?: number;
+  estado?: number;
 }

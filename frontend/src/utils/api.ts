@@ -4,9 +4,13 @@ import { getUserSession } from './storage';
 // Importar tipos desde sus archivos
 import type { AuditoriaFiltros, AuditoriaLog } from '../types/auditoria.types';
 import type { LoginRequest, TokenResponse } from '../types/auth.types';
-import type { Empresa, EmpresaUpdate } from '../types/empresa.types';
+import type { Empresa, EmpresaCreate, EmpresaUpdate } from '../types/empresa.types';
+import type { Escenario, EscenarioCreate, EscenarioUpdate } from '../types/escenario.types';
 import type { Naturaleza, NaturalezaCreate, NaturalezaUpdate } from '../types/naturaleza.types';
+import type { NucleoVariable, NucleoVariableUpdate } from '../types/nucleo.types';
+import type { Parametro, ParametroCreate, ParametroUpdate } from '../types/parametros.types';
 import type { Permiso, PermisoCreate, PermisoRelacion, PermisoUpdate, Rol, RolCreate, RolUpdate } from '../types/role.types';
+import type { Score, ScoreUpdate } from '../types/score.types';
 import type { Usuario, UsuarioCreate, UsuarioUpdate } from '../types/user.types';
 
 // Re-exportar todos los tipos para compatibilidad con código existente
@@ -23,7 +27,7 @@ export type {
 };
 
 // ============================================================================
-// FUNCIÓN BASE
+// FUNCIÓN BASE APIREQUEST
 // ============================================================================
 
 async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
@@ -49,55 +53,7 @@ async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promi
 }
 
 // ============================================================================
-// AUTENTICACIÓN
-// ============================================================================
-
-export const loginUser = async (credentials: LoginRequest): Promise<TokenResponse> => {
-  const formData = new URLSearchParams();
-  formData.append('username', credentials.email);
-  formData.append('password', credentials.password);
-  const response = await fetch(`${BASE_URL}/api/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: formData.toString(),
-  });
-  if (!response.ok) {
-    let errorMessage = 'Credenciales inválidas';
-    try {
-      const errorData = await response.json();
-      errorMessage = errorData.detail || errorMessage;
-    } catch { }
-    throw new Error(errorMessage);
-  }
-  return response.json() as Promise<TokenResponse>;
-};
-
-// ============================================================================
-// USUARIOS
-// ============================================================================
-
-export const obtenerUsuarios = async (skip = 0, limit = 100): Promise<Usuario[]> => {
-  return apiRequest<Usuario[]>(`/api/usuarios?skip=${skip}&limit=${limit}`);
-};
-
-export const crearUsuario = async (usuarioData: UsuarioCreate): Promise<Usuario> => {
-  return apiRequest<Usuario>('/api/usuarios', { method: 'POST', body: JSON.stringify(usuarioData) });
-};
-
-export const actualizarUsuario = async (userId: number, usuarioData: UsuarioUpdate): Promise<Usuario> => {
-  return apiRequest<Usuario>(`/api/usuarios/${userId}`, { method: 'PATCH', body: JSON.stringify(usuarioData) });
-};
-
-export const eliminarUsuario = async (userId: number): Promise<Usuario> => {
-  return apiRequest<Usuario>(`/api/usuarios/${userId}`, { method: 'DELETE' });
-};
-
-export const cambiarEstadoUsuario = async (userId: number, activo: boolean): Promise<Usuario> => {
-  return apiRequest<Usuario>(`/api/usuarios/${userId}/estado?activo=${activo}`, { method: 'PATCH' });
-};
-
-// ============================================================================
-// ROLES Y PERMISOS (catálogo)
+// ROLES (HU01)
 // ============================================================================
 
 export const obtenerRoles = async (skip = 0, limit = 100): Promise<Rol[]> => {
@@ -120,16 +76,8 @@ export const eliminarRol = async (rolId: number): Promise<Rol> => {
   return apiRequest<Rol>(`/api/roles/${rolId}`, { method: 'DELETE' });
 };
 
-export const obtenerPermisosCatalogo = async (skip = 0, limit = 100): Promise<Permiso[]> => {
-  return apiRequest<Permiso[]>('/api/roles/permisos');
-};
-
-export const asignarPermisosARol = async (rolId: number, permisosIds: number[]): Promise<void> => {
-  return apiRequest<void>(`/api/roles/${rolId}/permisos`, { method: 'POST', body: JSON.stringify(permisosIds) });
-};
-
 // ============================================================================
-// CRUD DE PERMISOS (HU02)
+// PERMISOS (HU02)
 // ============================================================================
 
 export const obtenerPermisos = async (skip = 0, limit = 100): Promise<Permiso[]> => {
@@ -149,7 +97,19 @@ export const eliminarPermiso = async (id: number): Promise<Permiso> => {
 };
 
 // ============================================================================
-// CRUD DE NATURALEZAS (HU04)
+// PERMISOS ROLES (HU03)
+// ============================================================================
+
+export const obtenerPermisosCatalogo = async (skip = 0, limit = 100): Promise<Permiso[]> => {
+  return apiRequest<Permiso[]>('/api/roles/permisos');
+};
+
+export const asignarPermisosARol = async (rolId: number, permisosIds: number[]): Promise<void> => {
+  return apiRequest<void>(`/api/roles/${rolId}/permisos`, { method: 'POST', body: JSON.stringify(permisosIds) });
+};
+
+// ============================================================================
+// NATURALEZAS (HU04)
 // ============================================================================
 
 export const obtenerNaturalezas = async (skip = 0, limit = 100): Promise<Naturaleza[]> => {
@@ -169,15 +129,73 @@ export const eliminarNaturaleza = async (id: number): Promise<Naturaleza> => {
 };
 
 // ============================================================================
-// EMPRESAS Y PERFIL
+// EMPRESAS (HU05)
 // ============================================================================
 
-export const obtenerEmpresaActual = async (): Promise<Empresa> => {
-  return apiRequest<Empresa>('/api/empresas/me');
+export const obtenerEmpresas = async (skip = 0, limit = 100): Promise<Empresa[]> => {
+  return apiRequest<Empresa[]>(`/api/empresas?skip=${skip}&limit=${limit}`);
 };
 
-export const actualizarEmpresa = async (empresaData: EmpresaUpdate): Promise<Empresa> => {
-  return apiRequest<Empresa>('/api/empresas/me', { method: 'PATCH', body: JSON.stringify(empresaData) });
+export const obtenerEmpresaPorId = async (id: number): Promise<Empresa> => {
+  return apiRequest<Empresa>(`/api/empresas/${id}`);
+};
+
+export const crearEmpresa = async (data: EmpresaCreate): Promise<Empresa> => {
+  return apiRequest<Empresa>('/api/empresas', { method: 'POST', body: JSON.stringify(data) });
+};
+
+export const actualizarEmpresa = async (id: number, data: EmpresaUpdate): Promise<Empresa> => {
+  return apiRequest<Empresa>(`/api/empresas/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+};
+
+export const eliminarEmpresa = async (id: number): Promise<Empresa> => {
+  return apiRequest<Empresa>(`/api/empresas/${id}`, { method: 'DELETE' });
+};
+
+// ============================================================================
+// USUARIOS (HU06)
+// ============================================================================
+
+// AUTENTICACIÓN DE USUARIOS
+
+export const loginUser = async (credentials: LoginRequest): Promise<TokenResponse> => {
+  const formData = new URLSearchParams();
+  formData.append('username', credentials.email);
+  formData.append('password', credentials.password);
+  const response = await fetch(`${BASE_URL}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: formData.toString(),
+  });
+  if (!response.ok) {
+    let errorMessage = 'Credenciales inválidas';
+    try {
+      const errorData = await response.json();
+      errorMessage = errorData.detail || errorMessage;
+    } catch { }
+    throw new Error(errorMessage);
+  }
+  return response.json() as Promise<TokenResponse>;
+};
+
+export const obtenerUsuarios = async (skip = 0, limit = 100): Promise<Usuario[]> => {
+  return apiRequest<Usuario[]>(`/api/usuarios?skip=${skip}&limit=${limit}`);
+};
+
+export const crearUsuario = async (usuarioData: UsuarioCreate): Promise<Usuario> => {
+  return apiRequest<Usuario>('/api/usuarios', { method: 'POST', body: JSON.stringify(usuarioData) });
+};
+
+export const actualizarUsuario = async (userId: number, usuarioData: UsuarioUpdate): Promise<Usuario> => {
+  return apiRequest<Usuario>(`/api/usuarios/${userId}`, { method: 'PATCH', body: JSON.stringify(usuarioData) });
+};
+
+export const eliminarUsuario = async (userId: number): Promise<Usuario> => {
+  return apiRequest<Usuario>(`/api/usuarios/${userId}`, { method: 'DELETE' });
+};
+
+export const cambiarEstadoUsuario = async (userId: number, activo: boolean): Promise<Usuario> => {
+  return apiRequest<Usuario>(`/api/usuarios/${userId}/estado?activo=${activo}`, { method: 'PATCH' });
 };
 
 export const obtenerMiPerfil = async (): Promise<Usuario> => {
@@ -205,3 +223,110 @@ export const obtenerLogsAuditoria = async (filtros: AuditoriaFiltros = {}): Prom
   const url = `/api/auditorias?${params.toString()}`;
   return apiRequest<AuditoriaLog[]>(url);
 };
+
+// ============================================================================
+// NÚCLEO DE VARIABLES (HU08)
+// ============================================================================
+
+export const obtenerNucleoVariables = async (): Promise<NucleoVariable[]> => {
+  return apiRequest<NucleoVariable[]>('/api/nucleo-variables');
+};
+
+export const actualizarNucleoVariable = async (nombre: string, data: NucleoVariableUpdate): Promise<NucleoVariable> => {
+  return apiRequest<NucleoVariable>(`/api/nucleo-variables/${nombre}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+};
+
+// ============================================================================
+// SCORE (HU09)
+// ============================================================================
+
+export const obtenerScore = async (): Promise<Score> => {
+  return apiRequest<Score>('/api/score');
+};
+
+export const actualizarScore = async (id: number, data: ScoreUpdate): Promise<Score> => {
+  return apiRequest<Score>(`/api/score/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+};
+
+export const recalcularDistribucion = async (): Promise<Score> => {
+  return apiRequest<Score>('/api/score/recalcular-distribucion', { method: 'POST' });
+};
+
+// ============================================================================
+// PARAMETROS (HU10)
+// ============================================================================
+
+export const obtenerParametros = async (): Promise<Parametro[]> => {
+  return apiRequest<Parametro[]>('/api/parametros');
+};
+
+export const crearParametro = async (data: ParametroCreate): Promise<Parametro> => {
+  return apiRequest<Parametro>('/api/parametros', { method: 'POST', body: JSON.stringify(data) });
+};
+
+export const actualizarParametro = async (id: number, data: ParametroUpdate): Promise<Parametro> => {
+  return apiRequest<Parametro>(`/api/parametros/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+};
+
+export const eliminarParametro = async (id: number): Promise<Parametro> => {
+  return apiRequest<Parametro>(`/api/parametros/${id}`, { method: 'DELETE' });
+};
+
+// ============================================================================
+// ESCENARIOS (HU11)
+// ============================================================================
+
+export const obtenerEscenariosPorParametro = async (parametroId: number): Promise<Escenario[]> => {
+  return apiRequest<Escenario[]>(`/api/escenarios/parametro/${parametroId}`);
+};
+
+export const crearEscenario = async (data: EscenarioCreate): Promise<Escenario> => {
+  return apiRequest<Escenario>('/api/escenarios', { method: 'POST', body: JSON.stringify(data) });
+};
+
+export const actualizarEscenario = async (id: number, data: EscenarioUpdate): Promise<Escenario> => {
+  return apiRequest<Escenario>(`/api/escenarios/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+};
+
+export const eliminarEscenario = async (id: number): Promise<Escenario> => {
+  return apiRequest<Escenario>(`/api/escenarios/${id}`, { method: 'DELETE' });
+};
+
+// ============================================================================
+// RIESGO (Matriz de riesgo) (HU12)
+// ============================================================================
+
+// ============================================================================
+// VERSION SCORING (HU13)
+// ============================================================================
+
+// ============================================================================
+// CLIENTES Y CREDITOS (HU14)
+// ============================================================================
+
+// ============================================================================
+// LIMITES_CARTERA (HU15)
+// ============================================================================
+
+// ============================================================================
+// PAGARES (HU16)
+// ============================================================================
+
+// ============================================================================
+// DASHBOARD (HU17)
+// ============================================================================
+
+// ============================================================================
+// REPORTES (HU18)
+// ============================================================================
+
+// ============================================================================
+// NOTIFICACIONES (HU19)
+// ============================================================================
+
+// ============================================================================
+// REPORTES (HU120)
+// ============================================================================

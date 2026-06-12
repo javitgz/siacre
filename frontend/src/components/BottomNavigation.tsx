@@ -21,9 +21,9 @@ interface BottomNavigationProps {
 const menus: MenuItem[] = [
   { name: 'Inicio', icon: 'home-outline', screen: 'Dashboard' },
   { name: 'Clientes', icon: 'briefcase-outline', screen: 'Clientes' },
-  { name: 'Parámetros', icon: 'options-outline', screen: 'Parametros' },
+  { name: 'Motor', icon: 'options-outline', screen: 'MotorConfig' },
   { name: 'Reportes', icon: 'pie-chart-outline', screen: 'Reportes' },
-  { name: 'Config', icon: 'settings-outline', screen: 'Configuracion' },
+  { name: 'Configuracion', icon: 'settings-outline', screen: 'Configuracion' },
   { name: 'Usuarios', icon: 'person-outline', screen: 'Usuarios' },
 ];
 
