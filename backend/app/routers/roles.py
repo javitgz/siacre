@@ -7,6 +7,7 @@ from app.core.auth import get_current_user
 from app.models.user import User
 from app.crud import role as crud_role
 from app.schemas.role import RoleCreate, RoleUpdate, RoleResponse, PermisoRelacionResponse
+from app.crud.auditoria import registrar_auditoria
 
 router = APIRouter(prefix="/api/roles", tags=["Roles y Permisos"])
 
@@ -72,7 +73,10 @@ def crear_nuevo_rol(
     rol_existente = crud_role.get_role_by_nombre(db=db, nombre=role_in.nombre)
     if rol_existente:
         raise HTTPException(status_code=400, detail=f"El rol con el nombre '{role_in.nombre}' ya se encuentra registrado")
-    return crud_role.create_role(db=db, role_in=role_in)
+    # Registrar la acción del usuario en auditoria
+    nuevo_rol = crud_role.create_role(db=db, role_in=role_in)
+    registrar_auditoria(db, current_user, 'CREATE', 'rol', f"ID: {nuevo_rol.id}, Nombre: {nuevo_rol.nombre}")
+    return nuevo_rol
 
 # ------------------------------------------------------------------
 # ACTUALIZAR ROL
@@ -88,6 +92,8 @@ def actualizar_rol(
     rol_actualizado = crud_role.update_role(db=db, role_id=role_id, role_in=role_in)
     if not rol_actualizado:
         raise HTTPException(status_code=404, detail='No se encontró el rol a actualizar')
+    # Registrar la acción del usuario en auditoria
+    registrar_auditoria(db, current_user, "UPDATE", "rol", f"ID: {role_id}, cambios: {role_in.model_dump(exclude_unset=True)}")
     return rol_actualizado
 
 # ------------------------------------------------------------------
@@ -103,6 +109,8 @@ def eliminar_rol(
     rol_eliminado = crud_role.delete_role(db=db, role_id=role_id)
     if not rol_eliminado:
         raise HTTPException(status_code=404, detail='No se encontró el rol a eliminar')
+    # Registrar la acción del usuario en auditoria
+    registrar_auditoria(db, current_user, 'CREATE', 'rol', f"ID: {role_id}, Nombre: {rol_eliminado.nombre}")
     return rol_eliminado
 
 # ------------------------------------------------------------------
@@ -122,4 +130,6 @@ def asociar_permisos_rol(
     exito = crud_role.assign_permisos_to_role(db=db, role_id=role_id, permiso_ids=permisos_ids)
     if not exito:
         raise HTTPException(status_code=500, detail='No se pudo completar la sincronización')
+    # Registrar la acción del usuario en auditoria
+    registrar_auditoria(db, current_user, "ASSIGN", "rol_permisos", f"Rol ID: {role_id}, Permisos IDs: {permisos_ids}")
     return {'status': 'success', 'message': f"Matriz de permisos sincronizada para el rol ID {role_id}."}

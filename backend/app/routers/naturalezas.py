@@ -7,6 +7,7 @@ from app.core.auth import get_current_user
 from app.models.user import User
 from app.models.naturaleza import Naturaleza, NaturalezaEnum
 from app.schemas.naturaleza import NaturalezaCreate, NaturalezaUpdate, NaturalezaResponse
+from app.crud.auditoria import registrar_auditoria
 
 router = APIRouter(prefix="/api/naturalezas", tags=["Gestión de Naturalezas"])
 
@@ -53,6 +54,8 @@ def crear_naturaleza(
     db.add(nueva)
     db.commit()
     db.refresh(nueva)
+    # Registrar la acción del usuario en auditoria
+    registrar_auditoria(db, current_user, 'CREATE', 'naturaleza', f"ID: {nueva.id}, Nombre: {nueva.nombre}")
     return nueva
 
 # ------------------------------------------------------------------
@@ -78,6 +81,8 @@ def actualizar_naturaleza(
         naturaleza.descripcion = nat_in.descripcion
     db.commit()
     db.refresh(naturaleza)
+    # Registrar la acción del usuario en auditoria
+    registrar_auditoria(db, current_user, 'UPDATE', 'naturaleza', f"ID: {naturaleza.id}, Nombre: {naturaleza.nombre}")
     return naturaleza
 
 # ------------------------------------------------------------------
@@ -96,4 +101,6 @@ def eliminar_naturaleza(
     naturaleza.estado = 0
     db.commit()
     db.refresh(naturaleza)
+    # Registrar la acción del usuario en auditoria
+    registrar_auditoria(db, current_user, 'DELETE', 'naturaleza', f"ID: {naturaleza.id}, Nombre: {naturaleza.nombre}")
     return naturaleza

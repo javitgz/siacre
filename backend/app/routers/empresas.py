@@ -7,6 +7,7 @@ from app.core.auth import get_current_user
 from app.models.user import User
 from app.crud import empresa as crud_empresa
 from app.schemas.empresa import EmpresaCreate, EmpresaUpdate, EmpresaResponse
+from app.crud.auditoria import registrar_auditoria
 
 router = APIRouter(prefix="/api/empresas", tags=["Gestión de Empresas"])
 
@@ -65,6 +66,8 @@ def actualizar_perfil_empresa_propia(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="No se pudo procesar la actualización. Empresa no encontrada."
         )
+    # Registrar la acción del usuario en auditoria
+    registrar_auditoria(db, current_user, 'UPDATE', 'empresa', f"ID: {empresa_actualizada.id}, Nombre: {empresa_actualizada.nombre}")
     return empresa_actualizada
 
 
@@ -74,7 +77,8 @@ def actualizar_perfil_empresa_propia(
 @router.post("/", response_model=EmpresaResponse, status_code=status.HTTP_201_CREATED)
 def registrar_nueva_empresa(
         empresa_in: EmpresaCreate,
-        db: Session = Depends(get_db)
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
 ):
     """
     Endpoint público orientado al aprovisionamiento automático (Onboarding/Sign-up)
@@ -87,4 +91,6 @@ def registrar_nueva_empresa(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Operación inválida. Ya existe un registro activo con el documento de identificación '{empresa_in.documento}'."
         )
+    # Registrar la acción del usuario en auditoria
+    registrar_auditoria(db, current_user, 'CREATE', 'empresa', f"ID: {empresa_in.id}, Nombre: {empresa_in.nombre}")
     return crud_empresa.create_empresa(db=db, empresa_in=empresa_in)

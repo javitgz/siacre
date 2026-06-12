@@ -8,6 +8,7 @@ from app.core.config import settings
 from app.core.auth import verify_password, create_access_token
 from app.crud import user as crud_user
 from app.schemas.auth import Token
+from app.crud.auditoria import registrar_auditoria
 
 router = APIRouter(prefix="/api/auth", tags=["Autenticación"])
 
@@ -27,24 +28,29 @@ def iniciar_sesion(
     usuario = crud_user.get_user_by_email(db, email=form_data.username)
     if not usuario:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Credenciales de acceso incorrectas",
+            status_code=401,
+            detail="Credenciales incorrectas",
             headers={'WWW-Authenticate': 'Bearer'}
         )
+
     # Verificar la validez de la contraseña provista contra el hash Bcrypt
     if not verify_password(form_data.password, usuario.hashed_password):
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail='Credenciales de acceso incorrectas',
+            status_code=401,
+            detail='Credenciales incorrectas',
             headers={'WWW-Authenticate': 'Bearer'}
         )
     # REGLA DE NEGOCIO: Impedir el ingreso de usuarios inactivos
     # Resuelve la HU de registro con aprobación pendiente (estado inicial = 0)
     if usuario.estado == 0:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail='Su cuenta de usuario se encuentra inactiva. Solicite la activación a su administrador corporativo'
+            status_code=403,
+            detail='Cuenta inactiva'
         )
+    # SOLO SI EL LOGIN ES EXITOSO, REGISTRAMOS AUDITORIA
+    # Registrar la acción del usuario en auditoria
+    registrar_auditoria(db, usuario, 'LOGIN', 'auth', f"Usuario {usuario.email} inicio sesión")
+
     # 4. Definir el tiempo de expiración del token desde la configuración
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
 

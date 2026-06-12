@@ -7,6 +7,7 @@ from app.models.user import User
 from app.crud import user as crud_user
 from app.crud import role as crud_role
 from app.schemas.user import UserCreate, UserUpdate, UserResponse
+from app.crud.auditoria import registrar_auditoria
 
 router = APIRouter(prefix="/api/usuarios", tags=["Usuarios"])
 
@@ -69,7 +70,10 @@ def crear_usuario(
     usuario_existente = crud_user.get_user_by_email(db, email=user_in.email)
     if usuario_existente:
         raise HTTPException(status_code=400, detail='El correo ya existe')
-    return crud_user.create_user(db=db, user_in=user_in)
+    # Registrar la acción del usuario en auditoria
+    nuevo_usuario = crud_user.get_user_by_email(db=db, user_in=user_in)
+    registrar_auditoria(db, current_user, 'CREATE', 'usuario', f"ID: {nuevo_usuario.id}, Email: {nuevo_usuario.email}")
+    return nuevo_usuario
 
 @router.patch('/{user_id}', response_model=UserResponse)
 def actualizar_usuario(
@@ -86,7 +90,10 @@ def actualizar_usuario(
     if current_user.rol.nombre.lower() in ['coordinador', 'supervisor']:
         if target_user.rol.nombre.lower() != 'analista':
             raise HTTPException(status_code=403, detail='Solo puede actualizar analistas')
-    return crud_user.update_user(db=db, user_id=user_id, empresa_id=current_user.empresa_id, user_in=user_in)
+    # Registrar la acción del usuario en auditoria
+    usuario_actualizado = crud_user.update_user(db=db, user_id=user_id, empresa_id=current_user.empresa_id, user_in=user_in)
+    registrar_auditoria(db, current_user, 'UPDATE', 'usuario', f"ID: {usuario_actualizado.id}, Email: {usuario_actualizado.email}")
+    return usuario_actualizado
 
 @router.patch('/{user_id}/estado', response_model=UserResponse)
 def cambiar_estado(
@@ -106,7 +113,10 @@ def cambiar_estado(
     if current_user.rol.nombre.lower() in ['coordinador', 'supervisor']:
         if target_user.rol.nombre.lower() != 'analista':
             raise HTTPException(status_code=403, detail='Solo puede cambiar estado de analistas')
-    return crud_user.cambiar_estado_usuario(db=db, user_id=user_id, empresa_id=current_user.empresa_id, activo=activo)
+    # Registrar la acción del usuario en auditoria
+    resultado = crud_user.cambiar_estado_usuario(db=db, user_id=user_id, empresa_id=current_user.empresa_id, activo=activo)
+    registrar_auditoria(db, current_user, 'CHANGE STATE', 'usuario', f"ID: {resultado.id}, Email: {resultado.email}, Nuevo estado: {activo}")
+    return resultado
 
 @router.delete('/{user_id}', response_model=UserResponse)
 def eliminar_usuario(
@@ -122,4 +132,7 @@ def eliminar_usuario(
     if current_user.rol.nombre.lower() in ['coordinador', 'supervisor']:
         if target_user.rol.nombre.lower() != 'analista':
             raise HTTPException(status_code=403, detail='Solo puede eliminar analistas')
-    return crud_user.delete_user(db=db, user_id=user_id, empresa_id=current_user.empresa_id)
+    # Registrar la acción del usuario en auditoria
+    usuario_eliminado = crud_user.delete_user(db=db, user_id=user_id, empresa_id=current_user.empresa_id)
+    registrar_auditoria(db, current_user, 'DELETE', 'usuario',f"ID: {usuario_eliminado.id}, Email: {usuario_eliminado.email}")
+    return usuario_eliminado

@@ -7,6 +7,7 @@ from app.core.auth import get_current_user
 from app.models.user import User
 from app.models.role import Permiso
 from app.schemas.permiso import PermisoCreate, PermisoUpdate, PermisoResponse
+from app.crud.auditoria import registrar_auditoria
 
 router = APIRouter(prefix="/api/permisos", tags=["Gestión de Permisos"])
 
@@ -53,6 +54,8 @@ def crear_permiso(
     db.add(nuevo)
     db.commit()
     db.refresh(nuevo)
+    # Registrar la acción del usuario en auditoria
+    registrar_auditoria(db, current_user, 'CREATE', 'permiso', f"ID: {nuevo.id}, Nombre: {nuevo.nombre}")
     return nuevo
 
 # ------------------------------------------------------------------
@@ -78,6 +81,8 @@ def actualizar_permiso(
         permiso.descripcion = permiso_in.descripcion
     db.commit()
     db.refresh(permiso)
+    # Registrar la acción del usuario en auditoria
+    registrar_auditoria(db, current_user, 'UPDATE', 'permiso', f"ID: {permiso_in.id}, Nombre: {permiso_in.nombre}")
     return permiso
 
 # ------------------------------------------------------------------
@@ -96,4 +101,6 @@ def eliminar_permiso(
     permiso.estado = 0
     db.commit()
     db.refresh(permiso)
+    # Registrar la acción del usuario en auditoria
+    registrar_auditoria(db, current_user, 'DELETE', 'permiso', f"ID: {permiso.id}, Nombre: {permiso.nombre}")
     return permiso

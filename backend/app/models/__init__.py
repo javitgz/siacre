@@ -9,6 +9,7 @@ from app.models.role import Role, Permiso, RolePermiso
 from app.models.empresa import Empresa, NaturalezaEnum, TipoDocumentoEnum
 from app.models.user import User
 from app.models.naturaleza import Naturaleza
+from app.models.auditoria import Auditoria
 
 # al declarar __all__, deifinimos con precision que clases se exportarán
 # cuando se ejecute un "from app.models import *"
@@ -22,5 +23,6 @@ __all__ = [
     'NaturalezaEnum',
     'TipoDocumentoEnum',
     'User',
-    'Naturaleza'
+    'Naturaleza',
+    'Auditoria'
 ]

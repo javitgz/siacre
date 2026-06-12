@@ -9,6 +9,7 @@ from app.routers.roles import router as roles_router
 from app.routers.empresas import router as empresas_router
 from app.routers.permisos import router as permisos_router
 from app.routers.naturalezas import router as naturalezas_router
+from app.routers.auditorias import router as auditorias_router
 
 # Inicialización de la aplicación FastAPI con metadatos del sistema
 app = FastAPI(
@@ -42,6 +43,7 @@ app.include_router(roles_router)
 app.include_router(empresas_router)
 app.include_router(permisos_router)
 app.include_router(naturalezas_router)
+app.include_router(auditorias_router)
 
 # ==========================================================================================================
 # ENDPOINT DE CONTROL DE SALUD (Health Check)

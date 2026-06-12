@@ -1,8 +1,8 @@
-// api.ts
 import { API_HEADERS, BASE_URL } from '../constants/api';
 import { getUserSession } from './storage';
 
 // Importar tipos desde sus archivos
+import type { AuditoriaFiltros, AuditoriaLog } from '../types/auditoria.types';
 import type { LoginRequest, TokenResponse } from '../types/auth.types';
 import type { Empresa, EmpresaUpdate } from '../types/empresa.types';
 import type { Naturaleza, NaturalezaCreate, NaturalezaUpdate } from '../types/naturaleza.types';
@@ -186,4 +186,22 @@ export const obtenerMiPerfil = async (): Promise<Usuario> => {
 
 export const actualizarMiPerfil = async (usuarioData: UsuarioUpdate): Promise<Usuario> => {
   return apiRequest<Usuario>('/api/usuarios/me', { method: 'PATCH', body: JSON.stringify(usuarioData) });
+};
+
+// ============================================================================
+// AUDITORÍA (HU07)
+// ============================================================================
+
+export const obtenerLogsAuditoria = async (filtros: AuditoriaFiltros = {}): Promise<AuditoriaLog[]> => {
+  const params = new URLSearchParams();
+  if (filtros.skip !== undefined) params.append('skip', filtros.skip.toString());
+  if (filtros.limit !== undefined) params.append('limit', filtros.limit.toString());
+  if (filtros.usuario_id !== undefined) params.append('usuario_id', filtros.usuario_id.toString());
+  if (filtros.empresa_id !== undefined) params.append('empresa_id', filtros.empresa_id.toString());
+  if (filtros.accion) params.append('accion', filtros.accion);
+  if (filtros.entidad) params.append('entidad', filtros.entidad);
+  if (filtros.fecha_desde) params.append('fecha_desde', filtros.fecha_desde);
+  if (filtros.fecha_hasta) params.append('fecha_hasta', filtros.fecha_hasta);
+  const url = `/api/auditorias?${params.toString()}`;
+  return apiRequest<AuditoriaLog[]>(url);
 };
